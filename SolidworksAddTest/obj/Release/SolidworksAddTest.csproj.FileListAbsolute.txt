@@ -1,0 +1,10 @@
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\bin\Release\baaderlogo.png
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\bin\Release\SolidworksAddTest.dll
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\bin\Release\SolidworksAddTest.pdb
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.csproj.AssemblyReference.cache
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.DependenciesResult.resources
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.TaskpaneHostUI.resources
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.csproj.GenerateResource.cache
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.csproj.CoreCompileInputs.cache
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.dll
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.pdb
