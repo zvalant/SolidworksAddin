@@ -63,9 +63,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DependenciesResult.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Include="DependenciesResult.cs" />
     <Compile Include="DependenciesResult.Designer.cs">
       <DependentUpon>DependenciesResult.cs</DependentUpon>
     </Compile>

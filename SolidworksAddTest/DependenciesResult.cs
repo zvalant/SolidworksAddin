@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Threading.Tasks;
+
 
 
 namespace SolidworksAddTest
@@ -15,10 +17,54 @@ namespace SolidworksAddTest
     [ComVisible(true)]
     [Guid("4099c769-bd7d-49a6-ac97-1ec1e38ddcf9")]
     [ProgId("SolidworksAddTest.DependenciesResult")]
+
+
+    public class EcnFile
+    { 
+        public string FileName { get; set; }
+        public string FilePath { get; set; }
+        public List<string> SearchPaths { get; set; }
+        public HashSet<string> Parents { get; set; }
+        public swDocumentTypes_e DocumentType { get; set; }
+
+        public void InsertSearchPaths(List<string> searchPaths) { 
+            SearchPaths = searchPaths;
+        }
+        public void InsertParents(string parent) 
+        { 
+            Parents.Add(parent);
+        }
+    
+    }
+    public class EcnRelease
+    { 
+        public string ReleaseNumber { get; set; }
+        public Dictionary<string, EcnFile> Files { get; set; }
+        public HashSet<EcnFile> BaseDependents { get; set; }
+
+        public EcnRelease(string releaseNumber)
+        {
+            ReleaseNumber = releaseNumber;
+            Files = new Dictionary<string, EcnFile>();
+        }
+        public void FileSetup(EcnFile currentFile, string currentFileName) 
+        {
+ 
+
+        }
+        public void AddFile(EcnFile file, string filePath) 
+        {
+            Files[filePath] = file;
+        }
+        public void AddBaseDependent(EcnFile file) {
+            BaseDependents.Add(file);
+        }
+    }
+
+
     public partial class DependenciesResult : UserControl
     {
         private SWTestRP parentAddin;
-        public HashSet<string> baseDependents = new HashSet<string>();
 
 
         public DependenciesResult()
@@ -49,16 +95,29 @@ namespace SolidworksAddTest
         }
         private int RunRelease() 
         {
+            var thisRelease = new EcnRelease("50001");
+
             var testReleaseList = new List<string>();
   
-            testReleaseList.Add("M:\\181\\1810203000.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810203000.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810203000.SLDASM");
+            //testReleaseList.Add("M:\\181\\1810214000.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810214200.SLDASM");
+            //testReleaseList.Add("M:\\181\\1810214200.SLDDRW");
+            testReleaseList.Add("M:\\181\\1810214215.SLDPRT");
+            testReleaseList.Add("M:\\181\\1810214215.SLDDRW");
 
             for (int i = 0; i < testReleaseList.Count; i++)
             {
                 string currentFile = testReleaseList[i];
+                var currentFileObj = new EcnFile();
+                currentFileObj.FilePath = testReleaseList[i];
+                currentFileObj.FileName = GetFileWithExt(currentFile);
+                thisRelease.AddFile(currentFileObj, currentFileObj.FileName);
                 SetSearchPaths(currentFile);
                 ReleaseFile(currentFile);
             }
+
             return 0;
         }
         private int SetSearchPaths(string filepath)
@@ -95,8 +154,48 @@ namespace SolidworksAddTest
             {
                 searchPathPriority.Add(archiveFolder);
             }
-            ManageSearchPaths(searchPathPriority);
+            ApplySWSearchPaths(searchPathPriority);
       
+
+            return dependenciesCount;
+        }
+        private int SetSearchPaths1(string filepath)
+        {
+
+            if (parentAddin == null)
+            {
+                MessageBox.Show("Parent add-in is not set.");
+                return 0;
+            }
+
+            SldWorks swApp = parentAddin.SolidWorksApplication;
+            HashSet<string> dependencies = new HashSet<string>();
+            Dictionary<string, int> folderCount = new Dictionary<string, int>();
+            var folderPriority = new List<(float percent, string folderPath)>();
+            GET_DEPENDENCIES1(filepath, swApp, dependencies, folderCount);
+            int dependenciesCount = dependencies.Count;
+            foreach (KeyValuePair<string, int> path in folderCount)
+            {
+                folderPriority.Add(((float)path.Value / dependenciesCount, path.Key));
+
+            }
+            folderPriority.Sort();
+            folderPriority.Reverse();
+            List<string> searchPathPriority = new List<string>();
+            for (int i = 0; i < folderPriority.Count; i++)
+            {
+                searchPathPriority.Add(folderPriority[i].folderPath);
+
+            }
+
+            string[] archiveFolders = Directory.GetDirectories(@"M:/");
+            foreach (string archiveFolder in archiveFolders)
+            {
+                searchPathPriority.Add(archiveFolder);
+            }
+
+            ApplySWSearchPaths(searchPathPriority);
+
 
             return dependenciesCount;
         }
@@ -113,7 +212,6 @@ namespace SolidworksAddTest
                 for (int i = 0; i < DepList.Length; i += 2)
                 {
                     string currentDependent = DepList[i+1];
-                    MessageBox.Show($"main {DocName} dependent: {currentDependent}");
 
                     if (!dependencies.Contains(currentDependent))
                     {
@@ -128,6 +226,41 @@ namespace SolidworksAddTest
                 MessageBox.Show($"Error Generating Dependencies: {ex.Message}");
             }
         return;
+        }
+        private void GET_DEPENDENCIES1(string DocName, SldWorks swApp, HashSet<string> dependencies, Dictionary<string, int> folderCount)
+        {
+            try
+            {
+                string[] DepList = swApp.GetDocumentDependencies2(DocName, false, false, false);
+
+                if (DepList == null || DepList.Length == 0)
+                {
+                    return;
+                }
+                for (int i = 0; i < DepList.Length; i += 2)
+                {
+                    string currentDependent = DepList[i + 1];
+
+                    if (!dependencies.Contains(currentDependent))
+                    {
+                        ParsePath(currentDependent, folderCount);
+                        dependencies.Add(currentDependent);
+                        GET_DEPENDENCIES(currentDependent, swApp, dependencies, folderCount);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error Generating Dependencies: {ex.Message}");
+            }
+            return;
+        }
+        private string GetFileWithExt(string docName)
+        {
+            string[] path = docName.Split(new char[] { '\\' });
+            string fileName = path[path.Length - 1];
+            return fileName;
+
         }
 
         private void ParsePath(string docName, Dictionary<string, int> folderCount)
@@ -200,6 +333,8 @@ namespace SolidworksAddTest
                     string errorMsg = GetOpenDocumentError(errors);
                     MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
                 }
+                Task.Delay(1000);
+                swApp.CloseAllDocuments(true);
             }
             catch (Exception ex)
             {
@@ -255,6 +390,8 @@ namespace SolidworksAddTest
                     string errorMsg = GetOpenDocumentError(errors);
                     MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
                 }
+                Task.Delay(1000);
+                swApp.CloseAllDocuments(true);
             }
             catch (Exception ex)
             {
@@ -310,6 +447,8 @@ namespace SolidworksAddTest
                     string errorMsg = GetOpenDocumentError(errors);
                     MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
                 }
+                Task.Delay(1000);
+                swApp.CloseDoc(filepath);
             }
             catch (Exception ex)
             {
@@ -349,7 +488,7 @@ namespace SolidworksAddTest
             swFileLoadError_e error = (swFileLoadError_e)errorCode;
             return error.ToString();
         }
-        private void ManageSearchPaths(List<string> searchPathPriority)
+        private void ApplySWSearchPaths(List<string> searchPathPriority)
         {
             try
             {

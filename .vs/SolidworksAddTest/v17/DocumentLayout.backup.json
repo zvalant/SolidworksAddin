@@ -7,12 +7,12 @@
       "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\dependenciesresult.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\dependenciesresult.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -42,13 +42,13 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "TaskpaneHostUI.cs",
               "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\TaskpaneHostUI.cs",
               "RelativeDocumentMoniker": "SolidworksAddTest\\TaskpaneHostUI.cs",
               "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\TaskpaneHostUI.cs",
               "RelativeToolTip": "SolidworksAddTest\\TaskpaneHostUI.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFUAAAA6AAAAAAAAAA==",
+              "ViewState": "AgIAAD0AAAAAAAAAAAAkwFMAAAAfAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-07-30T15:31:52.973Z",
               "EditorCaption": ""
@@ -90,22 +90,23 @@
               "RelativeDocumentMoniker": "SolidworksAddTest\\DependenciesResult.cs",
               "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.cs",
               "RelativeToolTip": "SolidworksAddTest\\DependenciesResult.cs",
-              "ViewState": "AgIAABYAAAAAAAAAAAA1wHIAAAA1AAAAAAAAAA==",
+              "ViewState": "AgIAADoAAAAAAAAAAAAuwEAAAAArAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-18T16:52:10.394Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "DependenciesResult.Designer.cs",
               "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.Designer.cs",
               "RelativeDocumentMoniker": "SolidworksAddTest\\DependenciesResult.Designer.cs",
               "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.Designer.cs",
               "RelativeToolTip": "SolidworksAddTest\\DependenciesResult.Designer.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-18T16:35:27.78Z"
+              "WhenOpened": "2025-08-18T16:35:27.78Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
