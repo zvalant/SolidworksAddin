@@ -18,6 +18,7 @@ namespace SolidworksAddTest
     public partial class DependenciesResult : UserControl
     {
         private SWTestRP parentAddin;
+        public HashSet<string> baseDependents = new HashSet<string>();
 
 
         public DependenciesResult()
@@ -40,15 +41,27 @@ namespace SolidworksAddTest
         private void GenerateButton_Click(object sender, EventArgs e)
         {
             DateTime startTime = DateTime.Now;
-            
-            int dependenciesCount = DependenciesRuntime();
+            int release = RunRelease();
             DateTime endTime = DateTime.Now;
             int runtime = (int)(endTime - startTime).TotalMilliseconds;
 
-            MessageBox.Show($"Dependencies found: {dependenciesCount}\nRuntime: {runtime/1000}.{runtime%1000} s");
+            MessageBox.Show($"Runtime: {runtime/1000}.{runtime%1000} s");
         }
+        private int RunRelease() 
+        {
+            var testReleaseList = new List<string>();
+  
+            testReleaseList.Add("M:\\181\\1810203000.SLDDRW");
 
-        private int DependenciesRuntime()
+            for (int i = 0; i < testReleaseList.Count; i++)
+            {
+                string currentFile = testReleaseList[i];
+                SetSearchPaths(currentFile);
+                ReleaseFile(currentFile);
+            }
+            return 0;
+        }
+        private int SetSearchPaths(string filepath)
         {
 
             if (parentAddin == null)
@@ -61,7 +74,6 @@ namespace SolidworksAddTest
             HashSet<string> dependencies = new HashSet<string>();
             Dictionary<string, int> folderCount = new Dictionary<string, int>();
             var folderPriority = new List<(float percent, string folderPath)>();
-            string filepath = "M:\\181\\1810212215.SLDPRT";
             GET_DEPENDENCIES(filepath, swApp, dependencies, folderCount);
             int dependenciesCount = dependencies.Count;
             foreach (KeyValuePair<string, int> path in folderCount)
@@ -75,6 +87,7 @@ namespace SolidworksAddTest
             for (int i = 0; i < folderPriority.Count; i++)
             {
                 searchPathPriority.Add(folderPriority[i].folderPath);
+
             }
 
             string[] archiveFolders = Directory.GetDirectories(@"M:/");
@@ -83,7 +96,7 @@ namespace SolidworksAddTest
                 searchPathPriority.Add(archiveFolder);
             }
             ManageSearchPaths(searchPathPriority);
-            OpenAssembly(filepath);
+      
 
             return dependenciesCount;
         }
@@ -100,6 +113,8 @@ namespace SolidworksAddTest
                 for (int i = 0; i < DepList.Length; i += 2)
                 {
                     string currentDependent = DepList[i+1];
+                    MessageBox.Show($"main {DocName} dependent: {currentDependent}");
+
                     if (!dependencies.Contains(currentDependent))
                     {
                         ParsePath(currentDependent, folderCount);
@@ -156,7 +171,7 @@ namespace SolidworksAddTest
                 }
 
                 // Define document type and options
-                int docType = (int)swDocumentTypes_e.swDocPART;
+                int docType = (int)swDocumentTypes_e.swDocASSEMBLY;
                 int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent;
                 int configuration = 0;
                 string configName = "";
@@ -189,6 +204,142 @@ namespace SolidworksAddTest
             catch (Exception ex)
             {
                 MessageBox.Show($"Exception opening assembly: {ex.Message}");
+            }
+        }
+        private void OpenPart(string filepath)
+        {
+            try
+            {
+                if (parentAddin == null)
+                {
+                    MessageBox.Show("Parent add-in is not set.");
+                    return;
+                }
+
+                SldWorks swApp = parentAddin.SolidWorksApplication;
+
+                // Check if file exists
+                if (!System.IO.File.Exists(filepath))
+                {
+                    MessageBox.Show($"File not found: {filepath}");
+                    return;
+                }
+
+                // Define document type and options
+                
+                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent;
+                int configuration = 0;
+                string configName = "";
+                int errors = 0;
+                int warnings = 0;
+
+                // Open the document
+                ModelDoc2 doc = swApp.OpenDoc6(
+                    filepath,
+                    (int)swDocumentTypes_e.swDocPART,
+                    options,
+                    configName,
+                    ref errors,
+                    ref warnings
+                );
+
+                if (doc != null)
+                {
+
+                    // Optional: Get some basic info about the assembly
+                    string title = doc.GetTitle();
+                    string pathName = doc.GetPathName();
+                }
+                else
+                {
+                    string errorMsg = GetOpenDocumentError(errors);
+                    MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Exception opening assembly: {ex.Message}");
+            }
+        }
+        private void OpenDrawing(string filepath)
+        {
+            try
+            {
+                if (parentAddin == null)
+                {
+                    MessageBox.Show("Parent add-in is not set.");
+                    return;
+                }
+
+                SldWorks swApp = parentAddin.SolidWorksApplication;
+
+                // Check if file exists
+                if (!System.IO.File.Exists(filepath))
+                {
+                    MessageBox.Show($"File not found: {filepath}");
+                    return;
+                }
+
+                // Define document type and options
+
+                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent;
+                int configuration = 0;
+                string configName = "";
+                int errors = 0;
+                int warnings = 0;
+
+                // Open the document
+                ModelDoc2 doc = swApp.OpenDoc6(
+                    filepath,
+                    (int)swDocumentTypes_e.swDocDRAWING,
+                    options,
+                    configName,
+                    ref errors,
+                    ref warnings
+                );
+
+                if (doc != null)
+                {
+
+                    // Optional: Get some basic info about the assembly
+                    string title = doc.GetTitle();
+                    string pathName = doc.GetPathName();
+                }
+                else
+                {
+                    string errorMsg = GetOpenDocumentError(errors);
+                    MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Exception opening assembly: {ex.Message}");
+            }
+        }
+
+
+        private void ReleaseFile(string filepath)
+        {
+            string fileExt = Path.GetExtension(filepath);
+            swDocumentTypes_e docType;
+            switch (fileExt)
+            {
+                case ".SLDPRT":
+                    docType = swDocumentTypes_e.swDocPART;
+                    OpenPart(filepath);
+                    break;
+                case ".SLDASM":
+                    docType = swDocumentTypes_e.swDocASSEMBLY;
+                    OpenAssembly(filepath);
+                    break;
+                case ".SLDDRW":
+                    docType = swDocumentTypes_e.swDocDRAWING;
+                    OpenDrawing(filepath);
+                    break;
+                default:
+                    break;
+
+
             }
         }
 
