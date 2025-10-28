@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Threading.Tasks;
+using System.Threading;
 
 
 
@@ -24,40 +25,56 @@ namespace SolidworksAddTest
         public string FileName { get; set; }
         public string FilePath { get; set; }
         public List<string> SearchPaths { get; set; }
-        public HashSet<string> Parents { get; set; }
+        public HashSet<EcnFile> Parents { get; set; }
         public swDocumentTypes_e DocumentType { get; set; }
-
+        public EcnFile()
+        {
+            SearchPaths = new List<string>();
+            Parents = new HashSet<EcnFile>();
+        }
         public void InsertSearchPaths(List<string> searchPaths) { 
             SearchPaths = searchPaths;
         }
-        public void InsertParents(string parent) 
+        public void InsertParent(EcnFile parent) 
         { 
             Parents.Add(parent);
         }
     
     }
     public class EcnRelease
-    { 
+    {
         public string ReleaseNumber { get; set; }
         public Dictionary<string, EcnFile> Files { get; set; }
         public HashSet<EcnFile> BaseDependents { get; set; }
+        public HashSet<EcnFile> CompletedFiles { get; set; } 
 
         public EcnRelease(string releaseNumber)
         {
             ReleaseNumber = releaseNumber;
             Files = new Dictionary<string, EcnFile>();
+            BaseDependents = new HashSet<EcnFile>();
+            CompletedFiles = new HashSet<EcnFile>();   
         }
-        public void FileSetup(EcnFile currentFile, string currentFileName) 
+        public void FileSetup(EcnFile currentFile, string currentFileName)
         {
- 
+
 
         }
-        public void AddFile(EcnFile file, string filePath) 
+        public void AddFile(EcnFile file, string fileName)
         {
-            Files[filePath] = file;
+            Files[fileName] = file;
         }
-        public void AddBaseDependent(EcnFile file) {
+        public void AddBaseDependent(EcnFile file)
+        {
             BaseDependents.Add(file);
+        }
+        public void RemoveBaseDependent(EcnFile file)
+        {
+            BaseDependents.Remove(file);
+        }
+        public void AddCompletedFile(EcnFile file)
+        {
+            CompletedFiles.Add(file);
         }
     }
 
@@ -98,15 +115,19 @@ namespace SolidworksAddTest
             var thisRelease = new EcnRelease("50001");
 
             var testReleaseList = new List<string>();
-  
-            //testReleaseList.Add("M:\\181\\1810203000.SLDDRW");
-            //testReleaseList.Add("M:\\181\\1810203000.SLDASM");
-            //testReleaseList.Add("M:\\181\\1810214000.SLDDRW");
-            //testReleaseList.Add("M:\\181\\1810214200.SLDASM");
-            //testReleaseList.Add("M:\\181\\1810214200.SLDDRW");
+
+            testReleaseList.Add("M:\\181\\1810203000.SLDDRW");
+            testReleaseList.Add("M:\\181\\1810203000.SLDASM");
+            testReleaseList.Add("M:\\181\\1810214000.SLDDRW");
+            testReleaseList.Add("M:\\181\\1810214000.SLDASM");
+            testReleaseList.Add("M:\\181\\1810214200.SLDASM");
+            testReleaseList.Add("M:\\181\\1810214200.SLDDRW");
             testReleaseList.Add("M:\\181\\1810214215.SLDPRT");
             testReleaseList.Add("M:\\181\\1810214215.SLDDRW");
-
+            testReleaseList.Add("M:\\181\\1810905000.SLDASM");
+            testReleaseList.Add("M:\\181\\1810905000.SLDDRW");
+            testReleaseList.Add("M:\\181\\1810212047.SLDPRT");
+            testReleaseList.Add("M:\\181\\1810212047.SLDDRW");
             for (int i = 0; i < testReleaseList.Count; i++)
             {
                 string currentFile = testReleaseList[i];
@@ -114,8 +135,35 @@ namespace SolidworksAddTest
                 currentFileObj.FilePath = testReleaseList[i];
                 currentFileObj.FileName = GetFileWithExt(currentFile);
                 thisRelease.AddFile(currentFileObj, currentFileObj.FileName);
-                SetSearchPaths(currentFile);
-                ReleaseFile(currentFile);
+                //SetSearchPaths(currentFile);
+                //ReleaseFile(currentFile);
+            }
+            foreach ( string fileName in thisRelease.Files.Keys)
+
+            {
+                var activeObj = thisRelease.Files[fileName];
+                SetSearchPaths1(thisRelease.Files[fileName].FilePath, thisRelease, activeObj);
+            }
+
+            
+            foreach (EcnFile file in thisRelease.Files.Values)
+
+            {
+
+                foreach (EcnFile parentFile in file.Parents)
+                {
+                  
+                    if (thisRelease.BaseDependents.Contains(parentFile))
+                    {
+                        thisRelease.RemoveBaseDependent(parentFile);
+                    }
+                }
+                
+            }
+
+            foreach (EcnFile file in thisRelease.BaseDependents) 
+            {
+                FileTraversal(file, file.FilePath, thisRelease);
             }
 
             return 0;
@@ -159,7 +207,7 @@ namespace SolidworksAddTest
 
             return dependenciesCount;
         }
-        private int SetSearchPaths1(string filepath)
+        private int SetSearchPaths1(string filepath, EcnRelease thisRelease, EcnFile currentFile)
         {
 
             if (parentAddin == null)
@@ -171,12 +219,12 @@ namespace SolidworksAddTest
             SldWorks swApp = parentAddin.SolidWorksApplication;
             HashSet<string> dependencies = new HashSet<string>();
             Dictionary<string, int> folderCount = new Dictionary<string, int>();
-            var folderPriority = new List<(float percent, string folderPath)>();
-            GET_DEPENDENCIES1(filepath, swApp, dependencies, folderCount);
+            var folderPriority = new List<(int count, string folderPath)>();
+            GET_DEPENDENCIES1(filepath, swApp, dependencies, folderCount ,thisRelease, currentFile);
             int dependenciesCount = dependencies.Count;
             foreach (KeyValuePair<string, int> path in folderCount)
             {
-                folderPriority.Add(((float)path.Value / dependenciesCount, path.Key));
+                folderPriority.Add((path.Value, path.Key));
 
             }
             folderPriority.Sort();
@@ -194,7 +242,7 @@ namespace SolidworksAddTest
                 searchPathPriority.Add(archiveFolder);
             }
 
-            ApplySWSearchPaths(searchPathPriority);
+            currentFile.InsertSearchPaths(searchPathPriority);
 
 
             return dependenciesCount;
@@ -227,7 +275,7 @@ namespace SolidworksAddTest
             }
         return;
         }
-        private void GET_DEPENDENCIES1(string DocName, SldWorks swApp, HashSet<string> dependencies, Dictionary<string, int> folderCount)
+        private void GET_DEPENDENCIES1(string DocName, SldWorks swApp, HashSet<string> dependencies, Dictionary<string, int> folderCount, EcnRelease thisRelease, EcnFile currentFile)
         {
             try
             {
@@ -235,17 +283,33 @@ namespace SolidworksAddTest
 
                 if (DepList == null || DepList.Length == 0)
                 {
+                        thisRelease.AddBaseDependent(currentFile);
                     return;
                 }
                 for (int i = 0; i < DepList.Length; i += 2)
                 {
                     string currentDependent = DepList[i + 1];
+                    string currentFileDependent = GetFileWithExt(currentDependent);
 
                     if (!dependencies.Contains(currentDependent))
                     {
+                
                         ParsePath(currentDependent, folderCount);
                         dependencies.Add(currentDependent);
-                        GET_DEPENDENCIES(currentDependent, swApp, dependencies, folderCount);
+                        if (thisRelease.Files.ContainsKey(currentFileDependent))
+                        {
+                            var dependentFileObj = thisRelease.Files[currentFileDependent];
+                            dependentFileObj.InsertParent(currentFile);
+                            if (thisRelease.BaseDependents.Contains(currentFile))
+                            {
+                                thisRelease.RemoveBaseDependent(currentFile);
+                            }
+                            GET_DEPENDENCIES1(currentDependent, swApp, dependencies, folderCount, thisRelease, dependentFileObj);
+                        }
+                        else 
+                        {
+                            GET_DEPENDENCIES1(currentDependent, swApp, dependencies, folderCount, thisRelease, currentFile);
+                        }
                     }
                 }
             }
@@ -333,8 +397,7 @@ namespace SolidworksAddTest
                     string errorMsg = GetOpenDocumentError(errors);
                     MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
                 }
-                Task.Delay(1000);
-                swApp.CloseAllDocuments(true);
+
             }
             catch (Exception ex)
             {
@@ -390,8 +453,7 @@ namespace SolidworksAddTest
                     string errorMsg = GetOpenDocumentError(errors);
                     MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
                 }
-                Task.Delay(1000);
-                swApp.CloseAllDocuments(true);
+
             }
             catch (Exception ex)
             {
@@ -447,7 +509,6 @@ namespace SolidworksAddTest
                     string errorMsg = GetOpenDocumentError(errors);
                     MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
                 }
-                Task.Delay(1000);
                 swApp.CloseDoc(filepath);
             }
             catch (Exception ex)
@@ -455,12 +516,30 @@ namespace SolidworksAddTest
                 MessageBox.Show($"Exception opening assembly: {ex.Message}");
             }
         }
+        private void CloseSWFile(string filepath)
+        {
+            try
+            {
+                if (parentAddin == null)
+                {
+                    MessageBox.Show("Parent add-in is not set.");
+                    return;
+                }
 
+                SldWorks swApp = parentAddin.SolidWorksApplication;
+                swApp.CloseDoc(filepath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error Closing SW File: {ex.Message}");
+            }
+        }
 
         private void ReleaseFile(string filepath)
         {
             string fileExt = Path.GetExtension(filepath);
             swDocumentTypes_e docType;
+
             switch (fileExt)
             {
                 case ".SLDPRT":
@@ -480,6 +559,25 @@ namespace SolidworksAddTest
 
 
             }
+        }
+        private void FileTraversal(EcnFile currentFile, string filePath, EcnRelease thisRelease)
+        {
+            if (thisRelease.CompletedFiles.Contains(currentFile))
+            {
+                return;
+            }
+            thisRelease.AddCompletedFile(currentFile);
+            ApplySWSearchPaths(currentFile.SearchPaths);
+            ReleaseFile(currentFile.FilePath);
+            Thread.Sleep(100);
+            foreach (EcnFile parentFile in currentFile.Parents)
+            {
+                FileTraversal(parentFile, parentFile.FilePath, thisRelease);
+            }
+            Thread.Sleep(100);
+            CloseSWFile(filePath);
+
+
         }
 
         // Helper method to interpret error codes
