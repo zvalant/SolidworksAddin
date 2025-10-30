@@ -3,20 +3,20 @@
   "WorkspaceRootPath": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\dependenciesresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\dependenciesresult.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -80,17 +80,17 @@
         },
         {
           "DockedWidth": 240,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "DependenciesResult.cs",
               "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.cs",
               "RelativeDocumentMoniker": "SolidworksAddTest\\DependenciesResult.cs",
-              "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.cs",
-              "RelativeToolTip": "SolidworksAddTest\\DependenciesResult.cs",
-              "ViewState": "AgIAAIUAAAAAAAAAAAAowJkAAAAAAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.cs*",
+              "RelativeToolTip": "SolidworksAddTest\\DependenciesResult.cs*",
+              "ViewState": "AgIAALsCAAAAAAAAAAAIwDoDAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-18T16:52:10.394Z",
               "EditorCaption": ""
@@ -105,11 +105,12 @@
               "RelativeToolTip": "SolidworksAddTest\\DependenciesResult.Designer.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-18T16:35:27.78Z"
+              "WhenOpened": "2025-08-18T16:35:27.78Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "SWTestRP.cs",
               "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\SWTestRP.cs",
               "RelativeDocumentMoniker": "SolidworksAddTest\\SWTestRP.cs",
@@ -117,19 +118,19 @@
               "RelativeToolTip": "SolidworksAddTest\\SWTestRP.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAGIAAABVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-30T15:12:08.625Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-07-30T15:12:08.625Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
               "Title": "DependenciesResult.cs [Design]",
               "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.cs",
               "RelativeDocumentMoniker": "SolidworksAddTest\\DependenciesResult.cs",
-              "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.cs [Design]",
-              "RelativeToolTip": "SolidworksAddTest\\DependenciesResult.cs [Design]",
+              "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\DependenciesResult.cs [Design]*",
+              "RelativeToolTip": "SolidworksAddTest\\DependenciesResult.cs [Design]*",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-18T16:35:18.139Z"
+              "WhenOpened": "2025-08-18T16:35:18.139Z",
+              "EditorCaption": " [Design]"
             }
           ]
         }

@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Net.NetworkInformation;
+using System.Web;
 
 
 
@@ -136,15 +138,16 @@ namespace SolidworksAddTest
             var testReleaseList = new List<string>();
 
             testReleaseList.Add("M:\\181\\1810203000.SLDDRW");
-            testReleaseList.Add("M:\\181\\1810203000.SLDASM");
-            testReleaseList.Add("M:\\181\\1810214000.SLDDRW");
-            testReleaseList.Add("M:\\181\\1810214000.SLDASM");
-            testReleaseList.Add("M:\\181\\1810214200.SLDASM");
-            testReleaseList.Add("M:\\181\\1810214200.SLDDRW");
-            testReleaseList.Add("M:\\181\\1810214215.SLDPRT");
-            testReleaseList.Add("M:\\181\\1810214215.SLDDRW");
-            testReleaseList.Add("M:\\181\\1810905000.SLDASM");
-            testReleaseList.Add("M:\\181\\1810905000.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810203000.SLDASM");
+            testReleaseList.Add("C:\\Users\\zacv\\Documents\\releaseTest\\1810203000.SLDASM");
+           // testReleaseList.Add("M:\\181\\1810214000.SLDDRW");
+           // testReleaseList.Add("M:\\181\\1810214000.SLDASM");
+           //testReleaseList.Add("M:\\181\\1810214200.SLDASM");
+           //testReleaseList.Add("M:\\181\\1810214200.SLDDRW");
+           //testReleaseList.Add("M:\\181\\1810214215.SLDPRT");
+           //testReleaseList.Add("M:\\181\\1810214215.SLDDRW");
+           // testReleaseList.Add("M:\\181\\1810905000.SLDASM");
+           //testReleaseList.Add("M:\\181\\1810905000.SLDDRW");
             testReleaseList.Add("M:\\181\\1810212047.SLDPRT");
             testReleaseList.Add("M:\\181\\1810212047.SLDDRW");
             //testReleaseList.Add("M:\\196\\1960000000.SLDASM");
@@ -176,7 +179,7 @@ namespace SolidworksAddTest
                 }
 
                 //SetSearchPaths(currentFile);
-                //ReleaseFile(currentFile);
+               //ReleaseFile(currentFileObj);
             }
             foreach ( string fileName in thisRelease.Files.Keys)
 
@@ -200,7 +203,7 @@ namespace SolidworksAddTest
                 }
                 
             }
-
+            
             foreach (EcnFile file in thisRelease.LeafFiles)
             {
                 thisRelease.ProcessFilesPush(file);
@@ -232,9 +235,9 @@ namespace SolidworksAddTest
                 {
                     if (file.DocumentType == swDocumentTypes_e.swDocDRAWING && file.LoadedFilesRemaining == 1)
                     {
-                        //ReleaseFile(file);
-                        //CloseSWFile(file.FilePath);
-                        //thisRelease.AddCompletedFile(file);
+                        ReleaseFile(file);
+                        CloseSWFile(file.FilePath);
+                        thisRelease.AddCompletedFile(file);
                         thisRelease.ProcessFilesPush(file);
 
                     }
@@ -244,23 +247,23 @@ namespace SolidworksAddTest
                     }
                     file.LoadedFilesRemaining--;
                 }
-                //CloseSWFile(currentFile.FilePath);
+                CloseSWFile(currentFile.FilePath);
 
 
             }
             swApp.CloseAllDocuments(true);
             
             
-            
             /*
+            
             foreach (EcnFile file in thisRelease.LeafFiles) 
 
             {
                 FileTraversal(file, file.FilePath, thisRelease);
 
             }
+            swApp.CloseAllDocuments(true);
             */
-            
 
 
             return 0;
@@ -445,14 +448,14 @@ namespace SolidworksAddTest
             }
 
         }
-        private void OpenAssembly(string filepath)
+        private ModelDoc2 OpenAssembly(string filepath)
         {
             try
             {
                 if (parentAddin == null)
                 {
                     MessageBox.Show("Parent add-in is not set.");
-                    return;
+                    return null;
                 }
 
                 SldWorks swApp = parentAddin.SolidWorksApplication;
@@ -461,7 +464,7 @@ namespace SolidworksAddTest
                 if (!System.IO.File.Exists(filepath))
                 {
                     MessageBox.Show($"File not found: {filepath}");
-                    return;
+                    return null;
                 }
                 
                 // Define document type and options
@@ -481,6 +484,7 @@ namespace SolidworksAddTest
                     ref errors,
                     ref warnings
                 );
+                ModelDocExtension swDocExt = doc.Extension;
 
                 if (doc != null)
                 {
@@ -488,19 +492,77 @@ namespace SolidworksAddTest
                     // Optional: Get some basic info about the assembly
                     string title = doc.GetTitle();
                     string pathName = doc.GetPathName();
+
                 }
                 else
                 {
                     string errorMsg = GetOpenDocumentError(errors);
                     MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
                 }
+                return doc;
 
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Exception opening assembly: {ex.Message}");
+                return null;
             }
         }
+        private void CheckAssembly(ModelDoc2 doc)
+        {
+            AssemblyDoc currentAssembly = (AssemblyDoc)doc;
+            Feature currentFeature = doc.FirstFeature();
+            /*
+            while (currentFeature != null)
+
+            {
+                object currentFeatureType = currentFeature.GetType();
+                Feature currentSubFeature = currentFeature.GetFirstSubFeature();
+                string currentFeatureName = currentFeature.Name;
+                int currentFeatureError = currentFeature.GetErrorCode();
+                if (currentFeatureError != 0)
+                {
+                    MessageBox.Show($"Feature: {currentFeatureName} Error Code: {currentFeatureError}");
+
+                }
+                while (currentSubFeature != null)
+                {
+                    string currentSubFeatureName = currentSubFeature.Name;
+                    int currentSubFeatureError = currentSubFeature.GetErrorCode();
+                    if (currentSubFeatureError != 0)
+                    {
+                        MessageBox.Show($"Subfeature Error! Feature: {currentFeatureName}, Error Code: {currentSubFeatureError}");
+
+                    }
+                    currentSubFeature = currentSubFeature.GetNextSubFeature();
+                }
+                currentFeature = currentFeature.GetNextFeature();
+
+            }
+            */
+            object[] components = currentAssembly.GetComponents(true);
+            foreach (Component2 component in components) 
+            {
+                object[] mates = component.GetMates();
+                foreach (object currentMate in mates)
+                {
+                    Feature mateFeat = (Feature)currentMate;
+                    int errorCodes = mateFeat.GetErrorCode();
+                    MessageBox.Show($"currentMate {mateFeat.Name} has Status {mateFeat.GetErrorCode()} ");
+                }
+                int solveResult = component.GetConstrainedStatus();
+                if (solveResult == (int)swConstrainedStatus_e.swUnderConstrained)
+                {
+                    MessageBox.Show($"underdefined {component.Name}");
+                } 
+                else if (solveResult == (int)swConstrainedStatus_e.swOverConstrained)
+                {
+                    MessageBox.Show($"OverDefined{component.Name}");
+                }
+            }
+            
+        }
+
         private void OpenPart(string filepath)
         {
             try
@@ -641,7 +703,8 @@ namespace SolidworksAddTest
                     OpenPart(file.FilePath);
                     break;
                 case swDocumentTypes_e.swDocASSEMBLY:
-                    OpenAssembly(file.FilePath);
+                    ModelDoc2 activeAssy = OpenAssembly(file.FilePath);
+                    CheckAssembly(activeAssy);
                     break;
                 case swDocumentTypes_e.swDocDRAWING:
                     docType = swDocumentTypes_e.swDocDRAWING;
@@ -667,6 +730,7 @@ namespace SolidworksAddTest
             thisRelease.AddCompletedFile(currentFile);
             ApplySWSearchPaths(currentFile.SearchPaths);
             ReleaseFile(currentFile);
+            
             foreach (EcnFile parentFile in currentFile.Parents)
             {
                 parentFile.LoadedFilesRemaining--;
@@ -677,14 +741,18 @@ namespace SolidworksAddTest
                 FileTraversal(parentFile, parentFile.FilePath, thisRelease);
                 
                 
+                
             }
             if (canClose)
             {
-
                 CloseSWFile(filePath);
+
+
             }
 
+
         }
+
 
         // Helper method to interpret error codes
         private string GetOpenDocumentError(int errorCode)
@@ -731,6 +799,32 @@ namespace SolidworksAddTest
                 MessageBox.Show($"Error managing search paths: {ex.Message}");
             }
         }
+        private void WriteReport(List<string> lines)
+        {
+            string filePath = @"C:\Temp\MateReport.txt";
+
+            try
+            {
+                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(filePath))
+                {
+                    writer.WriteLine("=== Assembly Mate Report ===");
+                    writer.WriteLine($"Generated: {DateTime.Now}");
+                    writer.WriteLine();
+
+                    foreach (string line in lines)
+                    {
+                        writer.WriteLine(line);
+                    }
+                }
+
+                MessageBox.Show($"Report saved to: {filePath}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}");
+            }
+        }
+
     }
 }
 
