@@ -3,15 +3,17 @@ using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using System.Threading.Tasks;
-using System.Threading;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
+using System.Windows.Forms;
+using static System.Windows.Forms.LinkLabel;
 
 
 
@@ -54,7 +56,7 @@ namespace SolidworksAddTest
         public HashSet<EcnFile> CompletedFiles { get; set; } 
         public Queue<EcnFile> ProcessingFileQueue { get; set; }
         public Stack<EcnFile> OpenFilesStack {  get; set; }
-        public EcnRelease(string releaseNumber)
+        public EcnRelease(string releaseNumber, int releaseType)
         {
             ReleaseNumber = releaseNumber;
             Files = new Dictionary<string, EcnFile>();
@@ -98,24 +100,124 @@ namespace SolidworksAddTest
         }
 
     }
-
-
-    public partial class DependenciesResult : UserControl
+    public class ReleaseReport
     {
-        private SWTestRP parentAddin;
-
-
-        public DependenciesResult()
+        public string EcnNumber { get; set; }
+        public string ReleaseType { get; set; } 
+        private string reportFilePath { get; set; }
+        public DateTime runTime {  get; set; }
+        public DateTime startTime { get; set; }   
+        public Dictionary<EcnFile, List<string>> Files { get; set; }
+        public ReleaseReport(string ecnNumber, int releaseType)
         {
-            InitializeComponent();
+            reportFilePath = @"C:\Users\zacv\Documents\releaseTest";
+            EcnNumber = ecnNumber;
+            Files = new Dictionary<EcnFile, List<string>>();
+            if (releaseType == 0)
+            {
+                ReleaseType = "RELEASE";
+            }
+            else 
+            {
+                ReleaseType = "READINESS FOR RELEASE";
+            }
+            string reportFolder = @"C:\Users\zacv\Documents\releaseTest";
+            if (!System.IO.Directory.Exists(reportFolder))
+            {
+                System.IO.Directory.CreateDirectory(reportFolder);
+            }
+            startTime = DateTime.Now;
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            reportFilePath = System.IO.Path.Combine(reportFolder, $"{EcnNumber}_{timestamp}.txt");
 
-
-            // Add a simple control to verify it's working
-            this.BackColor = Color.White;
-
-
+            // Create initial report file
+            CreateReportFile();
 
         }
+        private void CreateReportFile()
+        {
+            try
+            {
+                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(reportFilePath))
+                {
+                    writer.WriteLine("=".PadRight(60, '='));
+                    writer.WriteLine($"ECN {ReleaseType}: {EcnNumber}");
+                    writer.WriteLine("=".PadRight(60, '='));
+                    writer.WriteLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                    writer.WriteLine();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error creating report: {ex.Message}");
+            }
+        }
+        public void FinishReport() 
+        {
+            int DateTimeRunTime = (int)(DateTime.Now - startTime).TotalMilliseconds;
+
+            string runtimeString = $"Total Runtime: {DateTimeRunTime/1000}.{DateTimeRunTime%1000} S";
+          
+
+            List<string> FinalRuntime = new List<string>();
+            FinalRuntime.Add( "" );
+            FinalRuntime.Add("");
+            FinalRuntime.Add(runtimeString);
+            WriteToReport(FinalRuntime);
+        }
+
+        public void AddFile(EcnFile file)
+        {
+            Files[file] = new List<string>();
+        }
+        public void WriteToReport(List<string> lines)
+        {
+            try
+            {
+                System.IO.File.AppendAllLines(reportFilePath, lines);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error writing to report: {ex.Message}");
+            }
+        }
+        public void OpenReport()
+        {
+            try
+            {
+                if (System.IO.File.Exists(reportFilePath))
+                {
+                    System.Diagnostics.Process.Start("notepad.exe", reportFilePath);
+                }
+                else
+                {
+                    MessageBox.Show("Report file not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening report: {ex.Message}");
+            }
+        }
+    }
+
+        public partial class DependenciesResult : UserControl
+        {
+            private SWTestRP parentAddin;
+
+
+            public DependenciesResult()
+            {
+                InitializeComponent();
+
+
+                // Add a simple control to verify it's working
+                this.BackColor = Color.White;
+
+
+
+            }
+        
 
         public void SetParentAddin(SWTestRP parent)
         {
@@ -133,7 +235,7 @@ namespace SolidworksAddTest
         }
         private int RunRelease() 
         {
-            var thisRelease = new EcnRelease("50001");
+            var thisRelease = new EcnRelease("50001", 0);
 
             var testReleaseList = new List<string>();
 
@@ -148,14 +250,16 @@ namespace SolidworksAddTest
            //testReleaseList.Add("M:\\181\\1810214215.SLDDRW");
            // testReleaseList.Add("M:\\181\\1810905000.SLDASM");
            //testReleaseList.Add("M:\\181\\1810905000.SLDDRW");
-            testReleaseList.Add("M:\\181\\1810212047.SLDPRT");
-            testReleaseList.Add("M:\\181\\1810212047.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810212047.SLDPRT");
+            //testReleaseList.Add("M:\\181\\1810212047.SLDDRW");
             //testReleaseList.Add("M:\\196\\1960000000.SLDASM");
             //testReleaseList.Add("M:\\181\\1810200000.SLDDRW");
             //testReleaseList.Add("M:\\181\\1810200003.SLDDRW");
             SldWorks swApp = parentAddin.SolidWorksApplication;
 
             swApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swLargeAsmModeSuspendAutoRebuild,true);
+            var thisReleaseReport = new ReleaseReport(thisRelease.ReleaseNumber, 1);
+            
             for (int i = 0; i < testReleaseList.Count; i++)
             {
                 string currentFile = testReleaseList[i];
@@ -223,7 +327,7 @@ namespace SolidworksAddTest
                 }
                 thisRelease.PushOpenFileStack(currentFile);
                 ApplySWSearchPaths(currentFile.SearchPaths);
-                ReleaseFile(currentFile);
+                ReleaseFile(currentFile, thisReleaseReport);
                 thisRelease.AddCompletedFile(currentFile);
                 if (currentFile.Parents.Count < 1)
                 {
@@ -235,7 +339,7 @@ namespace SolidworksAddTest
                 {
                     if (file.DocumentType == swDocumentTypes_e.swDocDRAWING && file.LoadedFilesRemaining == 1)
                     {
-                        ReleaseFile(file);
+                        ReleaseFile(file, thisReleaseReport);
                         CloseSWFile(file.FilePath);
                         thisRelease.AddCompletedFile(file);
                         thisRelease.ProcessFilesPush(file);
@@ -508,7 +612,7 @@ namespace SolidworksAddTest
                 return null;
             }
         }
-        private void CheckAssembly(ModelDoc2 doc)
+        private int CheckAssembly(ModelDoc2 doc, ReleaseReport releaseReport, string filepath)
         {
             AssemblyDoc currentAssembly = (AssemblyDoc)doc;
             Feature currentFeature = doc.FirstFeature();
@@ -541,27 +645,91 @@ namespace SolidworksAddTest
             }
             */
             object[] components = currentAssembly.GetComponents(true);
-            foreach (Component2 component in components) 
-            {
-                object[] mates = component.GetMates();
-                foreach (object currentMate in mates)
+            object[] Mates = null;
+            List<string> mateSpace = new List<string>();
+            mateSpace.Add("     CHECK MATES BELOW");
+            List<string> assyName = new List<string>();
+            assyName.Add($"File: {filepath}");
+            releaseReport.WriteToReport(assyName);
+            int validRelease = 0;
+            int componenetError = 0;
+            int mateError = 0;
+            string previousMate = null;
+            string currentMateError = null;
+            foreach (object component in components)
+
+            { 
+                componenetError = 0;
+                mateError = 0;
+                List<string> mateErrors = new List<string>();
+                List<string> componentErrors = new List<string>();
+                Component2 swComponent = (Component2)component;
+                Mates = (Object[])swComponent.GetMates();
+                int solveResult = swComponent.GetConstrainedStatus();
+                if (Mates == null && swComponent.IsPatternInstance())
                 {
-                    Feature mateFeat = (Feature)currentMate;
-                    int errorCodes = mateFeat.GetErrorCode();
-                    MessageBox.Show($"currentMate {mateFeat.Name} has Status {mateFeat.GetErrorCode()} ");
+                    continue;
                 }
-                int solveResult = component.GetConstrainedStatus();
                 if (solveResult == (int)swConstrainedStatus_e.swUnderConstrained)
                 {
-                    MessageBox.Show($"underdefined {component.Name}");
-                } 
+                    componentErrors.Add($"  {swComponent.Name} UNDERDEFINED");
+                    componenetError = 1;
+                }
                 else if (solveResult == (int)swConstrainedStatus_e.swOverConstrained)
                 {
-                    MessageBox.Show($"OverDefined{component.Name}");
+                    componentErrors.Add($"  {swComponent.Name} OVERDEFINED");
+                    componenetError = 1;
+                }
+                else if (solveResult != (int)swConstrainedStatus_e.swFullyConstrained)
+                {
+                    componentErrors.Add($"   {swComponent.Name} NOT PROPERLY DEFINED");
+                    componenetError = 1;
+                }
+            
+                 if (Mates == null) 
+                {
+                    continue;
+                    
+                }
+
+                    foreach (Object SingleMate in Mates)
+
+                    {
+                        if (!(SingleMate is Mate2))
+                        {
+                            continue;
+                        }
+
+
+                        Feature mateFeat = (Feature)SingleMate;
+                        int errorCodes = mateFeat.GetErrorCode();
+                        if (errorCodes != 0)
+                        {
+                            mateErrors.Add($"       {mateFeat.Name}");
+                        }
+
+                        previousMate = mateFeat.Name;
+                    }
+    
+                if (componenetError != 0) 
+                {
+                    releaseReport.WriteToReport(componentErrors);
+                    if (mateErrors.Count > 0)
+                    {
+                        releaseReport.WriteToReport(mateSpace);
+                        releaseReport.WriteToReport(mateErrors);
+
+                    }
+                if(componenetError!=0)
+                    {
+                        validRelease = 1;
+                    }
                 }
             }
-            
-        }
+
+           
+            return validRelease;
+            }
 
         private void OpenPart(string filepath)
         {
@@ -694,9 +862,10 @@ namespace SolidworksAddTest
             }
         }
 
-        private void ReleaseFile(EcnFile file)
+        private void ReleaseFile(EcnFile file, ReleaseReport releaseReport)
         {
             swDocumentTypes_e docType= file.DocumentType;
+            int releaseResult = 0;
             switch (docType)
             {
                 case swDocumentTypes_e.swDocPART:
@@ -704,7 +873,13 @@ namespace SolidworksAddTest
                     break;
                 case swDocumentTypes_e.swDocASSEMBLY:
                     ModelDoc2 activeAssy = OpenAssembly(file.FilePath);
-                    CheckAssembly(activeAssy);
+                    releaseResult = CheckAssembly(activeAssy, releaseReport, file.FilePath);
+                    if (releaseResult != 0)
+                    {
+                        releaseReport.FinishReport();
+                        releaseReport.OpenReport();
+                    }
+                    
                     break;
                 case swDocumentTypes_e.swDocDRAWING:
                     docType = swDocumentTypes_e.swDocDRAWING;
@@ -712,11 +887,16 @@ namespace SolidworksAddTest
                     break;
                 default:
                     break;
+                  
 
 
             }
+            if (releaseResult != 0)
+            {
+                releaseReport.OpenReport();
+            }
         }
-        private void FileTraversal(EcnFile currentFile, string filePath, EcnRelease thisRelease)
+        private void FileTraversal(EcnFile currentFile, string filePath, EcnRelease thisRelease, ReleaseReport thisReport)
         {
             bool canClose = true;
             if (thisRelease.CompletedFiles.Contains(currentFile))
@@ -729,7 +909,7 @@ namespace SolidworksAddTest
             }
             thisRelease.AddCompletedFile(currentFile);
             ApplySWSearchPaths(currentFile.SearchPaths);
-            ReleaseFile(currentFile);
+            ReleaseFile(currentFile, thisReport);
             
             foreach (EcnFile parentFile in currentFile.Parents)
             {
@@ -738,7 +918,7 @@ namespace SolidworksAddTest
                     canClose = false;
                     continue;
                 }
-                FileTraversal(parentFile, parentFile.FilePath, thisRelease);
+                FileTraversal(parentFile, parentFile.FilePath, thisRelease, thisReport);
                 
                 
                 
@@ -799,31 +979,7 @@ namespace SolidworksAddTest
                 MessageBox.Show($"Error managing search paths: {ex.Message}");
             }
         }
-        private void WriteReport(List<string> lines)
-        {
-            string filePath = @"C:\Temp\MateReport.txt";
-
-            try
-            {
-                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(filePath))
-                {
-                    writer.WriteLine("=== Assembly Mate Report ===");
-                    writer.WriteLine($"Generated: {DateTime.Now}");
-                    writer.WriteLine();
-
-                    foreach (string line in lines)
-                    {
-                        writer.WriteLine(line);
-                    }
-                }
-
-                MessageBox.Show($"Report saved to: {filePath}");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}");
-            }
-        }
+      
 
     }
 }
