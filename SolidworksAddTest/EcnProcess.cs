@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using static System.Windows.Forms.LinkLabel;
 
 
@@ -21,7 +22,7 @@ namespace SolidworksAddTest
 {
     [ComVisible(true)]
     [Guid("4099c769-bd7d-49a6-ac97-1ec1e38ddcf9")]
-    [ProgId("SolidworksAddTest.DependenciesResult")]
+    [ProgId("SolidworksAddTest.EcnProcessService")]
 
 
     public class EcnFile
@@ -47,6 +48,62 @@ namespace SolidworksAddTest
         }
 
     
+    }
+    public class SolidworksService
+    {
+        SldWorks SolidWorksApp { get; set; }
+
+        public SolidworksService(SldWorks solidworksApp) 
+        {
+
+            SolidWorksApp = solidworksApp;
+        }
+        
+        public void OpenFile(string filename)
+        {   
+
+        }
+        public void ApplySearchPaths(List<string> searchPathPriority)
+        {
+            try
+            {
+
+                SolidWorksApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swUseFolderSearchRules, true);
+
+                SolidWorksApp.SetSearchFolders((int)swSearchFolderTypes_e.swDocumentType, null);
+                string searchFolders = SolidWorksApp.GetSearchFolders((int)swUserPreferenceToggle_e.swUseFolderSearchRules);
+
+
+
+
+                // Clear all search folders (optional - be careful!)
+                // swApp.SetSearchFolders(null);
+
+                // Set new search folders
+
+                string foldersString = "";
+                foreach (string folder in searchPathPriority)
+                {
+                    foldersString += folder + ";";
+                }
+                // Validate paths exist before adding
+                var validPaths = searchPathPriority.Where(path => Directory.Exists(path)).ToArray();
+
+                if (validPaths.Length > 0)
+                {
+                    SolidWorksApp.SetSearchFolders((int)swSearchFolderTypes_e.swDocumentType, foldersString);
+                }
+                string newSearchFolders = SolidWorksApp.GetSearchFolders((int)swUserPreferenceToggle_e.swUseFolderSearchRules);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error managing search paths class: {ex.Message}");
+            }
+        }
+        public void CloseAllDocuments()
+        {
+            SolidWorksApp.CloseAllDocuments(true);
+        }
     }
     public class EcnRelease
     {
@@ -201,29 +258,37 @@ namespace SolidworksAddTest
         }
     }
 
-        public partial class DependenciesResult : UserControl
+        public partial class EcnProcessService : UserControl
         {
             private SWTestRP parentAddin;
+        public SolidworksService ThisSolidworksService { get; set; }
+        public EcnRelease ThisEcnRelease { get; set; }
+
+        public ReleaseReport ThisReleaseReport { get; set; }
 
 
-            public DependenciesResult()
+
+        public EcnProcessService()
             {
-                InitializeComponent();
-
-
-                // Add a simple control to verify it's working
-                this.BackColor = Color.White;
-
-
-
+            InitializeComponent();
+            this.BackColor = Color.White;
             }
-        
+        public void InitalizeRelease()
+        {
+            string testReleaseNumber = "50001";
+            int releaseMode = 0;
+            ThisSolidworksService = new SolidworksService(parentAddin.SolidWorksApplication);
+            ThisEcnRelease = new EcnRelease(testReleaseNumber, releaseMode);
+            ThisReleaseReport = new ReleaseReport(testReleaseNumber, releaseMode);
 
+        }
         public void SetParentAddin(SWTestRP parent)
         {
             parentAddin = parent;
+            //test values to be removed later
+            // Add a simple control to verify it's working
         }
-     
+
         private void GenerateButton_Click(object sender, EventArgs e)
         {
             DateTime startTime = DateTime.Now;
@@ -235,30 +300,34 @@ namespace SolidworksAddTest
         }
         private int RunRelease() 
         {
-            var thisRelease = new EcnRelease("50001", 0);
+            //var thisRelease = new EcnRelease("50001", 0);
 
             var testReleaseList = new List<string>();
+            testReleaseList.Add("R:\\52576\\9092551121.SLDDRW");
 
-            testReleaseList.Add("M:\\181\\1810203000.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810203000.SLDDRW");
             //testReleaseList.Add("M:\\181\\1810203000.SLDASM");
             testReleaseList.Add("C:\\Users\\zacv\\Documents\\releaseTest\\1810203000.SLDASM");
-           // testReleaseList.Add("M:\\181\\1810214000.SLDDRW");
-           // testReleaseList.Add("M:\\181\\1810214000.SLDASM");
-           //testReleaseList.Add("M:\\181\\1810214200.SLDASM");
-           //testReleaseList.Add("M:\\181\\1810214200.SLDDRW");
-           //testReleaseList.Add("M:\\181\\1810214215.SLDPRT");
-           //testReleaseList.Add("M:\\181\\1810214215.SLDDRW");
-           // testReleaseList.Add("M:\\181\\1810905000.SLDASM");
-           //testReleaseList.Add("M:\\181\\1810905000.SLDDRW");
+            testReleaseList.Add("C:\\Users\\zacv\\Documents\\releaseTest\\1810203000.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810214000.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810214000.SLDASM");
+            //testReleaseList.Add("M:\\181\\1810214200.SLDASM");
+            //testReleaseList.Add("M:\\181\\1810214200.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810214215.SLDPRT");
+            //testReleaseList.Add("M:\\181\\1810214215.SLDDRW");
+            //testReleaseList.Add("M:\\181\\1810905000.SLDASM");
+            //testReleaseList.Add("M:\\181\\1810905000.SLDDRW");
             //testReleaseList.Add("M:\\181\\1810212047.SLDPRT");
             //testReleaseList.Add("M:\\181\\1810212047.SLDDRW");
+
             //testReleaseList.Add("M:\\196\\1960000000.SLDASM");
             //testReleaseList.Add("M:\\181\\1810200000.SLDDRW");
             //testReleaseList.Add("M:\\181\\1810200003.SLDDRW");
-            SldWorks swApp = parentAddin.SolidWorksApplication;
 
-            swApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swLargeAsmModeSuspendAutoRebuild,true);
-            var thisReleaseReport = new ReleaseReport(thisRelease.ReleaseNumber, 1);
+            //testReleaseList.Add("R:\\52552\\9024637660.SLDASM");
+            //testReleaseList.Add("R:\\52552\\9024637660.SLDDRW");
+            //testReleaseList.Add("R:\\52552\\9024637660.SLDASM");
+            //var thisReleaseReport = new ReleaseReport(thisRelease.ReleaseNumber, 1);
             
             for (int i = 0; i < testReleaseList.Count; i++)
             {
@@ -266,7 +335,7 @@ namespace SolidworksAddTest
                 var currentFileObj = new EcnFile();
                 currentFileObj.FilePath = testReleaseList[i];
                 currentFileObj.FileName = GetFileWithExt(currentFile);
-                thisRelease.AddFile(currentFileObj, currentFileObj.FileName);
+                ThisEcnRelease.AddFile(currentFileObj, currentFileObj.FileName);
                 switch (Path.GetExtension(currentFile))
                 {
                     case ".SLDPRT":
@@ -285,39 +354,39 @@ namespace SolidworksAddTest
                 //SetSearchPaths(currentFile);
                //ReleaseFile(currentFileObj);
             }
-            foreach ( string fileName in thisRelease.Files.Keys)
+            foreach ( string fileName in ThisEcnRelease.Files.Keys)
 
             {
-                var activeObj = thisRelease.Files[fileName];
-                SetSearchPaths1(thisRelease.Files[fileName].FilePath, thisRelease, activeObj);
+                var activeObj = ThisEcnRelease.Files[fileName];
+                SetSearchPaths1(ThisEcnRelease.Files[fileName].FilePath, ThisEcnRelease, activeObj);
             }
 
             
-            foreach (EcnFile file in thisRelease.Files.Values)
+            foreach (EcnFile file in ThisEcnRelease.Files.Values)
 
             {
                 foreach (EcnFile parentFile in file.Parents)
                 {
                     parentFile.LoadedFilesRemaining++;
                     
-                    if (thisRelease.LeafFiles.Contains(parentFile))
+                    if (ThisEcnRelease.LeafFiles.Contains(parentFile))
                     {
-                        thisRelease.RemoveLeafFile(parentFile);
+                        ThisEcnRelease.RemoveLeafFile(parentFile);
                     }
                 }
                 
             }
             
-            foreach (EcnFile file in thisRelease.LeafFiles)
+            foreach (EcnFile file in ThisEcnRelease.LeafFiles)
             {
-                thisRelease.ProcessFilesPush(file);
+                ThisEcnRelease.ProcessFilesPush(file);
 
             }
             
-            while (thisRelease.ProcessingFileQueue.Count > 0)
+            while (ThisEcnRelease.ProcessingFileQueue.Count > 0)
             {
-                var currentFile = thisRelease.ProcessFilesPop();
-                if (thisRelease.CompletedFiles.Contains(currentFile))
+                var currentFile = ThisEcnRelease.ProcessFilesPop();
+                if (ThisEcnRelease.CompletedFiles.Contains(currentFile))
                 {
                     continue;
                 }
@@ -325,49 +394,57 @@ namespace SolidworksAddTest
                 {
                     continue;
                 }
-                thisRelease.PushOpenFileStack(currentFile);
-                ApplySWSearchPaths(currentFile.SearchPaths);
-                ReleaseFile(currentFile, thisReleaseReport);
-                thisRelease.AddCompletedFile(currentFile);
+                ThisEcnRelease.PushOpenFileStack(currentFile);
+                ThisSolidworksService.ApplySearchPaths(currentFile.SearchPaths);
+                //ApplySWSearchPaths(currentFile.SearchPaths);
+                int releaseStatus = ReleaseFile(currentFile, ThisReleaseReport);
+                if (releaseStatus != 0)
+                {
+                    return 1;
+                }
+                ThisEcnRelease.AddCompletedFile(currentFile);
                 if (currentFile.Parents.Count < 1)
                 {
                     CloseSWFile(currentFile.FilePath);
-                    thisRelease.PopOpenFileStack();
+                    ThisEcnRelease.PopOpenFileStack();
                 }
                 
                 foreach (EcnFile file in currentFile.Parents)
                 {
                     if (file.DocumentType == swDocumentTypes_e.swDocDRAWING && file.LoadedFilesRemaining == 1)
                     {
-                        ReleaseFile(file, thisReleaseReport);
+                        ReleaseFile(file, ThisReleaseReport);
                         CloseSWFile(file.FilePath);
-                        thisRelease.AddCompletedFile(file);
-                        thisRelease.ProcessFilesPush(file);
+                        ThisEcnRelease.AddCompletedFile(file);
+                        //thisRelease.ProcessFilesPush(file);
 
                     }
                     else 
                     {
-                        thisRelease.ProcessFilesPush(file);
+                        ThisEcnRelease.ProcessFilesPush(file);
                     }
                     file.LoadedFilesRemaining--;
+
                 }
                 CloseSWFile(currentFile.FilePath);
 
 
             }
-            swApp.CloseAllDocuments(true);
-            
-            
+
+
+
             /*
             
             foreach (EcnFile file in thisRelease.LeafFiles) 
 
             {
-                FileTraversal(file, file.FilePath, thisRelease);
+                FileTraversal(file, file.FilePath, thisRelease, thisReleaseReport);
 
             }
-            swApp.CloseAllDocuments(true);
             */
+
+            ThisSolidworksService.CloseAllDocuments();
+
 
 
             return 0;
@@ -413,7 +490,7 @@ namespace SolidworksAddTest
         }
         private int SetSearchPaths1(string filepath, EcnRelease thisRelease, EcnFile currentFile)
         {
-
+            string testFolder = "C:\\Users\\zacv\\Documents\\releaseTest";
             if (parentAddin == null)
             {
                 MessageBox.Show("Parent add-in is not set.");
@@ -434,6 +511,7 @@ namespace SolidworksAddTest
             folderPriority.Sort();
             folderPriority.Reverse();
             List<string> searchPathPriority = new List<string>();
+            searchPathPriority.Add(testFolder);
             for (int i = 0; i < folderPriority.Count; i++)
             {
                 searchPathPriority.Add(folderPriority[i].folderPath);
@@ -612,42 +690,37 @@ namespace SolidworksAddTest
                 return null;
             }
         }
+        private HashSet<string> getSuppressedMates(ModelDoc2 doc)
+        {
+            AssemblyDoc currentAssembly = (AssemblyDoc)doc;
+            object[] Mates = null;
+
+            object[] components = currentAssembly.GetComponents(true);
+
+            HashSet<string> suppressedMatesResult = new HashSet<string>();
+            foreach (object component in components)
+            {
+                Component2 swComponent = (Component2)component;
+                if (swComponent.IsSuppressed()) continue;
+                Mates = (Object[])swComponent.GetMates();
+                if (Mates == null) continue;
+                foreach (object mate in Mates)
+                {
+                    Feature mateFeat = (Feature)mate;
+                    suppressedMatesResult.Add(mateFeat.Name);
+                    
+                }
+
+            }
+            return suppressedMatesResult;
+        }
         private int CheckAssembly(ModelDoc2 doc, ReleaseReport releaseReport, string filepath)
         {
             AssemblyDoc currentAssembly = (AssemblyDoc)doc;
             Feature currentFeature = doc.FirstFeature();
-            /*
-            while (currentFeature != null)
-
-            {
-                object currentFeatureType = currentFeature.GetType();
-                Feature currentSubFeature = currentFeature.GetFirstSubFeature();
-                string currentFeatureName = currentFeature.Name;
-                int currentFeatureError = currentFeature.GetErrorCode();
-                if (currentFeatureError != 0)
-                {
-                    MessageBox.Show($"Feature: {currentFeatureName} Error Code: {currentFeatureError}");
-
-                }
-                while (currentSubFeature != null)
-                {
-                    string currentSubFeatureName = currentSubFeature.Name;
-                    int currentSubFeatureError = currentSubFeature.GetErrorCode();
-                    if (currentSubFeatureError != 0)
-                    {
-                        MessageBox.Show($"Subfeature Error! Feature: {currentFeatureName}, Error Code: {currentSubFeatureError}");
-
-                    }
-                    currentSubFeature = currentSubFeature.GetNextSubFeature();
-                }
-                currentFeature = currentFeature.GetNextFeature();
-
-            }
-            */
             object[] components = currentAssembly.GetComponents(true);
             object[] Mates = null;
             List<string> mateSpace = new List<string>();
-            mateSpace.Add("     CHECK MATES BELOW");
             List<string> assyName = new List<string>();
             assyName.Add($"File: {filepath}");
             releaseReport.WriteToReport(assyName);
@@ -656,6 +729,10 @@ namespace SolidworksAddTest
             int mateError = 0;
             string previousMate = null;
             string currentMateError = null;
+            List<string> compResult = new List<string>();
+            HashSet<string> suppressedMatesSet = new HashSet<string>();
+            suppressedMatesSet = getSuppressedMates(doc);
+
             foreach (object component in components)
 
             { 
@@ -663,61 +740,103 @@ namespace SolidworksAddTest
                 mateError = 0;
                 List<string> mateErrors = new List<string>();
                 List<string> componentErrors = new List<string>();
+                List<string> MateSuppress = new List<string>();
                 Component2 swComponent = (Component2)component;
+                string[] swComponentSplitName = swComponent.Name.Split('-');
+                string formattedSwComponentName = "";
+                for (int i = 0; i < swComponentSplitName.Length - 1; i++)
+                { 
+                    formattedSwComponentName+= swComponentSplitName[i];
+                }
+                formattedSwComponentName += '<' + swComponentSplitName[1] + '>';
+                
+
                 Mates = (Object[])swComponent.GetMates();
                 int solveResult = swComponent.GetConstrainedStatus();
-                if (Mates == null && swComponent.IsPatternInstance())
+                string partMessage = $"Part: {swComponent.Name2} resolve: {solveResult}" ;
+                compResult.Add(partMessage);
+                bool isSWComponenetSupressed = false;
+                if (swComponent.IsSuppressed())
+                {
+                    isSWComponenetSupressed = true;
+                }
+        
+                if (swComponent.IsPatternInstance() || isSWComponenetSupressed)
                 {
                     continue;
                 }
                 if (solveResult == (int)swConstrainedStatus_e.swUnderConstrained)
                 {
-                    componentErrors.Add($"  {swComponent.Name} UNDERDEFINED");
+                    componentErrors.Add($"  {formattedSwComponentName} UNDERDEFINED");
                     componenetError = 1;
                 }
                 else if (solveResult == (int)swConstrainedStatus_e.swOverConstrained)
                 {
-                    componentErrors.Add($"  {swComponent.Name} OVERDEFINED");
+                    componentErrors.Add($"  {formattedSwComponentName} OVERDEFINED");
                     componenetError = 1;
                 }
                 else if (solveResult != (int)swConstrainedStatus_e.swFullyConstrained)
                 {
-                    componentErrors.Add($"   {swComponent.Name} NOT PROPERLY DEFINED");
+                    componentErrors.Add($"  {formattedSwComponentName} NOT PROPERLY DEFINED");
                     componenetError = 1;
                 }
             
-                 if (Mates == null) 
+                 if (Mates != null) 
                 {
-                    continue;
-                    
-                }
-
                     foreach (Object SingleMate in Mates)
 
                     {
-                        if (!(SingleMate is Mate2))
+                  
+                        if (!(SingleMate is Mate2) || isSWComponenetSupressed)
                         {
                             continue;
                         }
 
-
                         Feature mateFeat = (Feature)SingleMate;
                         int errorCodes = mateFeat.GetErrorCode();
-                        if (errorCodes != 0)
+                        bool[] isSuppressed = mateFeat.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration,null); 
+                        string mateName = mateFeat.Name;
+                 
+                        if (suppressedMatesSet.Contains(mateName))
+
                         {
-                            mateErrors.Add($"       {mateFeat.Name}");
+                            continue;
+                        }
+                        foreach (bool supressed in isSuppressed)
+                        {
+
+                            if (supressed)
+                            {
+                                MateSuppress.Add($"Mate '{mateName}' is SUPPRESSED");
+                            }
+                            else
+                            {
+                                MateSuppress.Add($"Mate '{mateName}' is NOT suppressed");
+                            }
+                        }
+
+                        if (errorCodes != 0 && componenetError==0)
+                        {
+                            componenetError = 1;
+                            componentErrors.Add($"  {formattedSwComponentName} PROPERLY DEFINED BUT HAS MATE ERRORS ");
+                            componentErrors.Add($"Mate: {mateFeat.Name} errorNUM: {componenetError} comp: {swComponent.Name2}");
+                            continue;
                         }
 
                         previousMate = mateFeat.Name;
                     }
-    
+
+
+                 }
+                releaseReport.WriteToReport(MateSuppress);
+               
                 if (componenetError != 0) 
                 {
                     releaseReport.WriteToReport(componentErrors);
                     if (mateErrors.Count > 0)
                     {
-                        releaseReport.WriteToReport(mateSpace);
-                        releaseReport.WriteToReport(mateErrors);
+                        //releaseReport.WriteToReport(mateSpace);
+                        //releaseReport.WriteToReport(mateErrors);
 
                     }
                 if(componenetError!=0)
@@ -730,6 +849,9 @@ namespace SolidworksAddTest
            
             return validRelease;
             }
+
+
+
 
         private void OpenPart(string filepath)
         {
@@ -752,7 +874,7 @@ namespace SolidworksAddTest
 
                 // Define document type and options
                 
-                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent | (int)swOpenDocOptions_e.swOpenDocOptions_LoadModel; 
+                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent | (int)swOpenDocOptions_e.swOpenDocOptions_LoadModel;
                 int configuration = 0;
                 string configName = "";
                 int errors = 0;
@@ -787,23 +909,22 @@ namespace SolidworksAddTest
                 MessageBox.Show($"Exception opening assembly: {ex.Message}");
             }
         }
-        private void OpenDrawing(string filepath)
+        private ModelDoc2 OpenDrawing(string filepath)
         {
             try
             {
                 if (parentAddin == null)
                 {
                     MessageBox.Show("Parent add-in is not set.");
-                    return;
+                    return null;
                 }
 
                 SldWorks swApp = parentAddin.SolidWorksApplication;
-
                 // Check if file exists
                 if (!System.IO.File.Exists(filepath))
                 {
                     MessageBox.Show($"File not found: {filepath}");
-                    return;
+                    return null;
                 }
                 swApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swAutomaticDrawingViewUpdate,false);
                 // Define document type and options
@@ -835,13 +956,146 @@ namespace SolidworksAddTest
                 {
                     string errorMsg = GetOpenDocumentError(errors);
                     MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
+                    return doc;
                 }
-                
+                return doc;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Exception opening assembly: {ex.Message}");
+                return null;
             }
+        }
+
+        private int CheckDrawing(ModelDoc2 doc, ReleaseReport releaseReport, string filePath, bool deleteAnnotations=false)
+        {
+            SldWorks swApp = parentAddin.SolidWorksApplication;
+            ModelDocExtension swModExt = default(ModelDocExtension);
+            int danglingCount = 0;
+            int DanglingColorRef = 16777215;
+            bool annotationsSeleted = false;
+            SelectionMgr swSelmgr;
+            SelectData swSelData;
+            swSelmgr = (SelectionMgr)doc.SelectionManager;
+            swModExt = (ModelDocExtension)doc.Extension;
+            //deleteAnnotations = true;
+            int sheetIdx = 0;
+
+            swSelData = swSelmgr.CreateSelectData();
+
+
+            if (doc == null) 
+            {
+                return 1;
+            }
+            int totalAnnotations = 0;
+            DrawingDoc swDrawingDoc = (DrawingDoc)doc;
+            object[] sheets = swDrawingDoc.GetViews();
+            string[] sheetNames = swDrawingDoc.GetSheetNames();
+
+            if (sheets == null || sheets.Length == 0)
+            {
+                MessageBox.Show("No sheets found in drawing");
+                return 1;
+            }
+             foreach (object[] sheetObj in sheets)
+             {
+                    if (sheetObj == null) continue;
+                    string currentSheetName = sheetNames[sheetIdx];
+                    foreach (object view in sheetObj)
+                    {
+                        if (view == null) continue;
+                        SolidWorks.Interop.sldworks.View currentView = (SolidWorks.Interop.sldworks.View)view;
+                        string currentViewName = currentView.Name;
+                        int annotationsCount = currentView.GetAnnotationCount();
+                        object[] viewAnnotations = currentView.GetAnnotations();
+                        if (viewAnnotations == null) continue;
+                        foreach (object annotation in viewAnnotations)
+                        {
+                            if (annotation == null) continue;
+                            Annotation currentAnnotation = (Annotation)annotation;
+                            if (!currentAnnotation.IsDangling()) continue;
+
+                            bool validAnnotationCheck = DanglingValidation(currentAnnotation, swSelmgr, swSelData, 
+                                currentSheetName, currentViewName);
+                            
+                           
+                            
+                        }
+
+                    }
+                    sheetIdx++;
+
+             }
+            if (deleteAnnotations)
+            {
+                doc.EditDelete();
+            }
+
+             return 0;
+        }
+        private bool DanglingValidation(Annotation currentAnnotation, SelectionMgr swSelmgr, SelectData swSelData, 
+            string currentSheetName, string currentViewName)
+        {
+            bool validAnnotationCheck = true;
+            switch ((int)currentAnnotation.GetType())
+            {
+                case (int)swAnnotationType_e.swNote:
+                    Note currentNote = (Note)currentAnnotation.GetSpecificAnnotation();
+                    if (currentNote.IsBomBalloon() || currentNote.IsStackedBalloon())
+                    {
+                        MessageBox.Show("Dangling BOM Balloon");
+                        validAnnotationCheck = false;
+                    }
+                    break;
+                case (int)swAnnotationType_e.swDisplayDimension:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swDatumOrigin:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swDatumTag:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swDatumTargetSym:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swGTol:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swWeldSymbol:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swSFSymbol:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swDowelSym:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swCenterMarkSym:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swCenterLine:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swLeader:
+                    validAnnotationCheck = false;
+                    break;
+                case (int)swAnnotationType_e.swCustomSymbol:
+                    validAnnotationCheck = false;
+                    break;
+
+                default:
+                    validAnnotationCheck = true;
+                    break;
+            }
+            if (!validAnnotationCheck)
+            {
+                currentAnnotation.Select3(true, swSelData);
+                MessageBox.Show($"-{currentSheetName}, {currentViewName} - {currentAnnotation.GetName()} is dangling");
+            }
+
+            return validAnnotationCheck;
         }
         private void CloseSWFile(string filepath)
         {
@@ -862,7 +1116,7 @@ namespace SolidworksAddTest
             }
         }
 
-        private void ReleaseFile(EcnFile file, ReleaseReport releaseReport)
+        private int ReleaseFile(EcnFile file, ReleaseReport releaseReport)
         {
             swDocumentTypes_e docType= file.DocumentType;
             int releaseResult = 0;
@@ -874,27 +1128,23 @@ namespace SolidworksAddTest
                 case swDocumentTypes_e.swDocASSEMBLY:
                     ModelDoc2 activeAssy = OpenAssembly(file.FilePath);
                     releaseResult = CheckAssembly(activeAssy, releaseReport, file.FilePath);
-                    if (releaseResult != 0)
-                    {
-                        releaseReport.FinishReport();
-                        releaseReport.OpenReport();
-                    }
-                    
                     break;
                 case swDocumentTypes_e.swDocDRAWING:
                     docType = swDocumentTypes_e.swDocDRAWING;
-                    OpenDrawing(file.FilePath);
+                    ModelDoc2 activeSWDrawing = OpenDrawing(file.FilePath);
+                    releaseResult = CheckDrawing(activeSWDrawing, releaseReport, file.FilePath);
                     break;
                 default:
                     break;
-                  
-
-
             }
             if (releaseResult != 0)
             {
+                CloseSWFile(file.FilePath);
+                releaseReport.FinishReport();
                 releaseReport.OpenReport();
+                return 1;
             }
+            return 0;
         }
         private void FileTraversal(EcnFile currentFile, string filePath, EcnRelease thisRelease, ReleaseReport thisReport)
         {
@@ -923,13 +1173,15 @@ namespace SolidworksAddTest
                 
                 
             }
+            /*
             if (canClose)
             {
                 CloseSWFile(filePath);
 
 
             }
-
+            */
+            CloseSWFile(filePath);
 
         }
 

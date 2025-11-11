@@ -121,19 +121,19 @@ namespace SolidworksAddTest
                     
                 }
 
-                System.Windows.Forms.MessageBox.Show("About to call AddControl for DependenciesResult...");
+                System.Windows.Forms.MessageBox.Show("About to call AddControl for EcnProcessService...");
 
-                var control = mTaskpaneView.AddControl("SolidworksAddTest.DependenciesResult", string.Empty);
+                var control = mTaskpaneView.AddControl("SolidworksAddTest.EcnProcessService", string.Empty);
 
                 System.Windows.Forms.MessageBox.Show($"AddControl returned type: {control.GetType().FullName}");
 
                 // Only try to cast if it's the right type
  
                
-                var resultsControl = (DependenciesResult)control;
+                var resultsControl = (EcnProcessService)control;
                 resultsControl.SetParentAddin(this);
                 mTaskpaneHost = resultsControl;
-                System.Windows.Forms.MessageBox.Show("Successfully switched to DependenciesResult!");
+                System.Windows.Forms.MessageBox.Show("Successfully switched to EcnProcessService!");
              
              
             }

@@ -63,7 +63,7 @@ namespace SolidworksAddTest
         {
             if (mainViewFlag)
             {
-                LoadDependenciesResultView();
+                EcnProcessServiceView();
 
             }
             else 
@@ -72,22 +72,23 @@ namespace SolidworksAddTest
             }
         }
 
-        private void LoadDependenciesResultView()
+        private void EcnProcessServiceView()
         {
             try
             {
                 mainViewFlag = false;
                 contentPanel.Controls.Clear();
+                EcnProcessService resultsControl = new EcnProcessService();
 
-                DependenciesResult resultsControl = new DependenciesResult();
                 resultsControl.SetParentAddin(parentAddin);
+                resultsControl.InitalizeRelease();
                 resultsControl.Dock = DockStyle.Fill;
 
                 contentPanel.Controls.Add(resultsControl);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading DependenciesResult: {ex.Message}");
+                MessageBox.Show($"Error loading EcnProecessService: {ex.Message}");
             }
         }
         private void button1_Click(object sender, EventArgs e)

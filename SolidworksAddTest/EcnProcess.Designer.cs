@@ -1,6 +1,6 @@
 ﻿namespace SolidworksAddTest
 {
-    partial class DependenciesResult
+    partial class EcnProcessService
     {
         /// <summary> 
         /// Required designer variable.
@@ -41,13 +41,13 @@
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.GenerateButton_Click);
             // 
-            // DependenciesResult
+            // EcnProcessService
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.button1);
             this.Margin = new System.Windows.Forms.Padding(4);
-            this.Name = "DependenciesResult";
+            this.Name = "EcnProcessService";
             this.Size = new System.Drawing.Size(200, 185);
             this.ResumeLayout(false);
 

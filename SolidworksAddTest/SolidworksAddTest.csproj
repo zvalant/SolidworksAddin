@@ -63,9 +63,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DependenciesResult.cs" />
-    <Compile Include="DependenciesResult.Designer.cs">
-      <DependentUpon>DependenciesResult.cs</DependentUpon>
+    <Compile Include="EcnProcess.cs" />
+    <Compile Include="EcnProcess.Designer.cs">
+      <DependentUpon>EcnProcess.cs</DependentUpon>
     </Compile>
     <Compile Include="SWTestRP.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -77,8 +77,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="DependenciesResult.resx">
-      <DependentUpon>DependenciesResult.cs</DependentUpon>
+    <EmbeddedResource Include="EcnProcess.resx">
+      <DependentUpon>EcnProcess.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="TaskpaneHostUI.resx">
       <DependentUpon>TaskpaneHostUI.cs</DependentUpon>
