@@ -63,10 +63,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EcnProcess.cs" />
-    <Compile Include="EcnProcess.Designer.cs">
-      <DependentUpon>EcnProcess.cs</DependentUpon>
+    <Compile Include="EcnFile.cs" />
+    <Compile Include="EcnProcessService.cs">
+      <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="EcnProcessService.Designer.cs">
+      <DependentUpon>EcnProcessService.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EcnRelease.cs" />
+    <Compile Include="ReleaseReport.cs" />
+    <Compile Include="ReleaseValidationService.cs" />
+    <Compile Include="SolidworksService.cs" />
     <Compile Include="SWTestRP.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TaskpaneHostUI.cs">
@@ -77,8 +84,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="EcnProcess.resx">
-      <DependentUpon>EcnProcess.cs</DependentUpon>
+    <EmbeddedResource Include="EcnProcessService.resx">
+      <DependentUpon>EcnProcessService.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="TaskpaneHostUI.resx">
       <DependentUpon>TaskpaneHostUI.cs</DependentUpon>

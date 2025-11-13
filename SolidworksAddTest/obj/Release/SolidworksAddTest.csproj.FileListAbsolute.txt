@@ -7,4 +7,4 @@ C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\Solid
 C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.csproj.CoreCompileInputs.cache
 C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.dll
 C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.pdb
-C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.EcnFile.resources
+C:\Users\zacv\source\repos\SolidworksAddTest\SolidworksAddTest\obj\Release\SolidworksAddTest.EcnProcessService.resources
