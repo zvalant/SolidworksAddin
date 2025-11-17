@@ -11,15 +11,15 @@ namespace SolidworksAddTest
 {
     public class DrawingValidationResult
     {
-        public bool CriticalError {  get; set; }   
-        public bool FoundDanglingAnnotations { get; set; }  
+        public bool CriticalError { get; set; }
+        public bool FoundDanglingAnnotations { get; set; }
         public List<SheetInfo> TotalSheets { get; set; }
 
-        
 
 
 
-        public DrawingValidationResult() 
+
+        public DrawingValidationResult()
         {
             CriticalError = false;
             FoundDanglingAnnotations = false;
@@ -28,14 +28,32 @@ namespace SolidworksAddTest
     }
     public class PartValidationResult
     {
-        public bool CriticalError { get; set; } 
-        public List< string> TotalFeatures { get; set; }
+        public bool CriticalError { get; set; }
+        public bool FoundFeatureErrors { get; set; }
+        public List<PartFeatureInfo> TotalSketchErrors { get; set; }
+        public PartValidationResult()
+        { 
+            CriticalError=false;
+            FoundFeatureErrors=false;
+            TotalSketchErrors = new List<PartFeatureInfo>();
+        }
+    }
+    public class PartFeatureInfo
+    {
+        public string FeatureName { get; set; }
+        public string SketchName { get; set; }
+        public PartFeatureInfo(string featureName, string sketchName) 
+        { 
+
+        }
+
+
     }
     public class SheetInfo
     {
-        public string Name { get; set; } 
+        public string Name { get; set; }
         public List<ViewInfo> Views = new List<ViewInfo>();
-        public bool FoundDanglingAnnotations {get;set;}
+        public bool FoundDanglingAnnotations { get; set; }
 
         public SheetInfo(string name)
         {
@@ -63,7 +81,7 @@ namespace SolidworksAddTest
         private SolidworksService ThisSolidworksService { get; set; }
 
         public ReleaseValidationService(SolidworksService thisSolidworksService)
-            
+
         {
             ThisSolidworksService = thisSolidworksService;
         }
@@ -312,7 +330,7 @@ namespace SolidworksAddTest
                 }
 
             }
-            else 
+            else
             {
                 validAnnotationCheck = true;
                 return true;
@@ -325,36 +343,54 @@ namespace SolidworksAddTest
 
             return validAnnotationCheck;
         }
-        public int CheckPart(ModelDoc2 doc, string filepath)
+        public PartValidationResult CheckPart(ModelDoc2 doc, string filepath)
         {
+            PartValidationResult currentPartResult = new PartValidationResult();
             PartDoc swPart = (PartDoc)doc;
-            if (swPart == null) return -1;
+            if (swPart == null)
+            {
+                currentPartResult.CriticalError = true;
+                return currentPartResult;
+            }
             Feature currentFeature = (Feature)swPart.FirstFeature();
+            if (currentFeature == null)
+            {
+                currentPartResult.CriticalError = true;
+                return currentPartResult;
+            }
             Feature currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
             while (currentFeature != null)
             {
                 if (currentFeature.GetSpecificFeature2() is Sketch)
                 {
-                    Sketch currentFeatureSketch = (Sketch)currentFeature;
+                    Sketch currentFeatureSketch = (Sketch)currentFeature.GetSpecificFeature2();
                     int constrinStatus = (int)currentFeatureSketch.GetConstrainedStatus();
-                    MessageBox.Show($"constrain status: {constrinStatus}");
                 }
                 currentFeature.GetSpecificFeature();
                 currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
-                while (currentSubFeature != null && currentSubFeature.GetSpecificFeature2() is Sketch)
+                while (currentSubFeature != null)
                 {
                     if (currentSubFeature.GetSpecificFeature2() is Sketch)
                     {
-                        MessageBox.Show($"SubFeatureName: {currentSubFeature.Name} FeatureName {currentFeature.Name}");
+                        Sketch currentSubFeatureSketch = (Sketch)currentSubFeature.GetSpecificFeature2();
+                        string featureType = currentFeature.GetTypeName2();
+                        int subConstrainStatus = (int)currentSubFeatureSketch.GetConstrainedStatus();
+                        if ((!ThisSolidworksService.FeatureTypeExceptions.Contains(featureType)) && subConstrainStatus!=3)
+                        {
+                            PartFeatureInfo currentFeatureInfo = new PartFeatureInfo(currentFeature.Name, currentSubFeature.Name);
+                            currentPartResult.FoundFeatureErrors = true;
+                            currentPartResult.TotalSketchErrors.Add(currentFeatureInfo);
+                        }
+                  
                     }
                     currentSubFeature = currentSubFeature.GetNextSubFeature();
                 }
                 currentFeature = currentFeature.GetNextFeature();
             }
-            return 0;
+            return currentPartResult;
 
         }
-
-
     }
 }
+
+

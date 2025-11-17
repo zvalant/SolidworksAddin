@@ -74,6 +74,8 @@ namespace SolidworksAddTest
         {
             //var thisRelease = new EcnRelease("50001", 0);
             //modify ecn location after inital test
+            InitalizeRelease();
+
             var testReleaseList = new List<string>();
             string folderPath = $@"C:\Users\zacv\Documents\releaseTest\{ThisEcnRelease.ReleaseNumber}";
 
@@ -319,12 +321,14 @@ namespace SolidworksAddTest
             {
                 case swDocumentTypes_e.swDocPART:
                     ModelDoc2 activePart = ThisSolidworksService.OpenPart(file.FilePath);
-                     releaseResult = ThisReleaseValidationService.CheckPart(activePart, file.FilePath);
+                    PartValidationResult partReleaseResult = ThisReleaseValidationService.CheckPart(activePart, file.FilePath);
+
 
                     break;
                 case swDocumentTypes_e.swDocASSEMBLY:
                     ModelDoc2 activeAssy = ThisSolidworksService.OpenAssembly(file.FilePath);
                     releaseResult = ThisReleaseValidationService.CheckAssembly(activeAssy);
+
                     break;
                 case swDocumentTypes_e.swDocDRAWING:
                     docType = swDocumentTypes_e.swDocDRAWING;
@@ -345,7 +349,6 @@ namespace SolidworksAddTest
                             {
                                 continue;
                             }
-                            //reportLines.Add($"{currentSheetName}");
                             foreach (ViewInfo currentViewInfo in currentSheetInfo.Views)
                             {
                                 if (!currentViewInfo.FoundDanglingAnnotations) 
@@ -353,11 +356,8 @@ namespace SolidworksAddTest
                                     continue;
                                 }
                                 string currentViewName = currentViewInfo.Name;
-                                //reportLines.Add($"\t{currentViewName}");
                                 foreach (string annotationtype in currentViewInfo.AnnotationCount.Keys)
                                 {
-
-                                    //reportLines.Add($"\t\t{currentViewInfo.AnnotationCount[annotationtype]} dangling {annotationtype}(s)");
                                     reportLines.Add($"\t{currentSheetName}, {currentViewName} - {currentViewInfo.AnnotationCount[annotationtype]} dangling {annotationtype}(s)");
 
                                 }

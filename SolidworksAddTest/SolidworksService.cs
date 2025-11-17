@@ -14,27 +14,33 @@ namespace SolidworksAddTest
     {
         SldWorks SolidWorksApp { get; set; }
         public Dictionary<int, string> ReleaseAnnotations {  get; set; }
+        public HashSet<string> FeatureTypeExceptions { get; set; }
 
         public SolidworksService(SldWorks solidworksApp)
         {
 
             SolidWorksApp = solidworksApp;
+
             ReleaseAnnotations = new Dictionary<int, string>();
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swNote, "Balloon");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swDisplayDimension, "Dimension");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swDatumOrigin, "Datum Origin");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swDatumTag, "Datum Tag");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swDatumTargetSym, "Datum Target");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swGTol, "Geo Tol");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swWeldSymbol, "Weld Symbol");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swSFSymbol, "Surface Finish Symbol");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swDowelSym, "Dowel Pin Symbol");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swCenterMarkSym, "Center Mark");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swCenterLine, "CetnerLine");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swLeader, "General Leader");
-            ReleaseAnnotations.Add((int)swAnnotationType_e.swCustomSymbol, "Custom Symbol");
+            ReleaseAnnotations[(int)swAnnotationType_e.swNote] = "Balloon";
+            ReleaseAnnotations[(int)swAnnotationType_e.swDisplayDimension] = "Dimension";
+            ReleaseAnnotations[(int)swAnnotationType_e.swDatumOrigin] = "Datum Origin";
+            ReleaseAnnotations[(int)swAnnotationType_e.swDatumTag] = "Datum Tag";
+            ReleaseAnnotations[(int)swAnnotationType_e.swDatumTargetSym] = "Datum Target";
+            ReleaseAnnotations[(int)swAnnotationType_e.swGTol] = "Geo Tol";
+            ReleaseAnnotations[(int)swAnnotationType_e.swWeldSymbol] = "Weld Symbol";
+            ReleaseAnnotations[(int)swAnnotationType_e.swSFSymbol] = "Surface Finish Symbol";
+            ReleaseAnnotations[(int)swAnnotationType_e.swDowelSym] = "Dowel Pin Symbol";
+            ReleaseAnnotations[(int)swAnnotationType_e.swCenterMarkSym] = "Center Mark";
+            ReleaseAnnotations[(int)swAnnotationType_e.swCenterLine] = "CetnerLine";
+            ReleaseAnnotations[(int)swAnnotationType_e.swLeader] = "General Leader";
+            ReleaseAnnotations[(int)swAnnotationType_e.swCustomSymbol] = "Custom Symbol";
 
+            FeatureTypeExceptions = new HashSet<string>();
 
+            FeatureTypeExceptions.Add("EdgeFlange");
+            FeatureTypeExceptions.Add("FlatPattern");
+            
         }
         public ModelDoc2 OpenAssembly(string filepath)
         {

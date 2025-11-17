@@ -81,7 +81,6 @@ namespace SolidworksAddTest
                 EcnProcessService resultsControl = new EcnProcessService();
 
                 resultsControl.SetParentAddin(parentAddin);
-                resultsControl.InitalizeRelease();
                 resultsControl.Dock = DockStyle.Fill;
 
                 contentPanel.Controls.Add(resultsControl);
