@@ -15,10 +15,6 @@ namespace SolidworksAddTest
         public bool FoundDanglingAnnotations { get; set; }
         public List<SheetInfo> TotalSheets { get; set; }
 
-
-
-
-
         public DrawingValidationResult()
         {
             CriticalError = false;
@@ -38,13 +34,42 @@ namespace SolidworksAddTest
             TotalSketchErrors = new List<PartFeatureInfo>();
         }
     }
+    public class AssemblyValidationResult
+    {
+        public bool CritalError { get; set; }
+        public bool FoundComponentErrors { get; set; }
+        public List<ComponentInfo> TotalComponentErrors { get; set; }
+        public AssemblyValidationResult()
+        {
+            CritalError = false;
+            FoundComponentErrors = false;
+            TotalComponentErrors = new List<ComponentInfo>();
+        }
+    }
+    public class ComponentInfo
+    { 
+        public string Name { get; set; }
+        public string ConstraintStatus { get; set; }
+        public string Configuration {  get; set; }
+        public bool FoundError { get; set; }
+        public ComponentInfo(string componentName, string constraintStatus, string configuration)
+        {
+            Name = componentName;
+            ConstraintStatus = constraintStatus;
+            Configuration = configuration;
+            FoundError = false;
+        }
+    }
     public class PartFeatureInfo
     {
         public string FeatureName { get; set; }
         public string SketchName { get; set; }
-        public PartFeatureInfo(string featureName, string sketchName) 
+        public string ConfigurationName { get; set; }
+        public PartFeatureInfo(string featureName, string sketchName, string configurationName) 
         { 
-
+            FeatureName = featureName;
+            SketchName = sketchName;
+            ConfigurationName = configurationName;
         }
 
 
@@ -85,140 +110,116 @@ namespace SolidworksAddTest
         {
             ThisSolidworksService = thisSolidworksService;
         }
-        public int CheckAssembly(ModelDoc2 doc)
+        public AssemblyValidationResult CheckAssembly(ModelDoc2 doc)
         {
-            AssemblyDoc currentAssembly = (AssemblyDoc)doc;
-            Feature currentFeature = doc.FirstFeature();
-            object[] components = currentAssembly.GetComponents(true);
-            object[] Mates = null;
-            List<string> mateSpace = new List<string>();
-            List<string> assyName = new List<string>();
-            int validRelease = 0;
-            int componenetError = 0;
-            int mateError = 0;
-            string previousMate = null;
-            string currentMateError = null;
-            List<string> compResult = new List<string>();
-            HashSet<string> suppressedMatesSet = new HashSet<string>();
-            suppressedMatesSet = ThisSolidworksService.getSuppressedMates(doc);
+            AssemblyValidationResult currentAssemblyResult = new AssemblyValidationResult();
 
-            foreach (object component in components)
+            string[] configurationNames = ThisSolidworksService.GetConfigurationNames(doc);
 
+            foreach (string configurationName in configurationNames)
             {
-                componenetError = 0;
-                mateError = 0;
-                List<string> mateErrors = new List<string>();
-                List<string> componentErrors = new List<string>();
-                List<string> MateSuppress = new List<string>();
-                Component2 swComponent = (Component2)component;
-                string[] swComponentSplitName = swComponent.Name.Split('-');
-                string formattedSwComponentName = "";
-                for (int i = 0; i < swComponentSplitName.Length - 1; i++)
-                {
-                    formattedSwComponentName += swComponentSplitName[i];
-                }
-                formattedSwComponentName += '<' + swComponentSplitName[1] + '>';
 
+                bool configSwitch = doc.ShowConfiguration2(configurationName);
+                Configuration activeConfiguration = doc.GetActiveConfiguration();
+                AssemblyDoc currentAssembly = (AssemblyDoc)doc;
+                Feature currentFeature = doc.FirstFeature();
+                object[] components = currentAssembly.GetComponents(true);
+                object[] Mates = null;
+                HashSet<string> suppressedMatesSet = new HashSet<string>();
+                suppressedMatesSet = ThisSolidworksService.getSuppressedComponentMates(doc);
 
-                Mates = (Object[])swComponent.GetMates();
-                int solveResult = swComponent.GetConstrainedStatus();
-                string partMessage = $"Part: {swComponent.Name2} resolve: {solveResult}";
-                compResult.Add(partMessage);
-                bool isSWComponenetSupressed = false;
-                if (swComponent.IsSuppressed())
+                if (!configSwitch & activeConfiguration.Name != configurationName)
                 {
-                    isSWComponenetSupressed = true;
+                    currentAssemblyResult.CritalError = true;
+                    return currentAssemblyResult;
                 }
+                foreach (object component in components)
 
-                if (swComponent.IsPatternInstance() || isSWComponenetSupressed)
                 {
-                    continue;
-                }
-                if (solveResult == (int)swConstrainedStatus_e.swUnderConstrained)
-                {
-                    componentErrors.Add($"  {formattedSwComponentName} UNDERDEFINED");
-                    componenetError = 1;
-                }
-                else if (solveResult == (int)swConstrainedStatus_e.swOverConstrained)
-                {
-                    componentErrors.Add($"  {formattedSwComponentName} OVERDEFINED");
-                    componenetError = 1;
-                }
-                else if (solveResult != (int)swConstrainedStatus_e.swFullyConstrained)
-                {
-                    componentErrors.Add($"  {formattedSwComponentName} NOT PROPERLY DEFINED");
-                    componenetError = 1;
-                }
-
-                if (Mates != null)
-                {
-                    foreach (Object SingleMate in Mates)
-
+                    List<string> MateSuppress = new List<string>();
+                    Component2 swComponent = (Component2)component;
+                    string[] swComponentSplitName = swComponent.Name.Split('-');
+                    string formattedSwComponentName = "";
+                    for (int i = 0; i < swComponentSplitName.Length - 1; i++)
                     {
+                        formattedSwComponentName += swComponentSplitName[i];
+                    }
+                    formattedSwComponentName += '<' + swComponentSplitName[1] + '>';
 
-                        if (!(SingleMate is Mate2) || isSWComponenetSupressed)
+                    ComponentInfo currentComponentInfo = new ComponentInfo(formattedSwComponentName, "FULLY DEFINED", configurationName);
+                    Mates = (Object[])swComponent.GetMates();
+                    int solveResult = swComponent.GetConstrainedStatus();
+                    if (swComponent.IsPatternInstance() || swComponent.IsSuppressed())
+                    {
+                        continue;
+                    }
+                    switch (solveResult)
+                    {
+                        case (int)swConstrainedStatus_e.swUnderConstrained:
+                            currentComponentInfo.ConstraintStatus = "UNDERDEFINED";
+                            currentComponentInfo.FoundError = true;
+                            break;
+                        case (int)swConstrainedStatus_e.swOverConstrained:
+                            currentComponentInfo.ConstraintStatus = "OVERDEFINED";
+                            currentComponentInfo.FoundError = true;
+
+                            break;
+                        default:
+                            break;
+                    }
+                    if (currentComponentInfo.FoundError == true)
+                    {
+                        currentAssemblyResult.TotalComponentErrors.Add(currentComponentInfo);
+                        currentAssemblyResult.FoundComponentErrors = true;
+                        continue;
+                    }
+                    if (Mates != null)
+                    {
+                        foreach (Object SingleMate in Mates)
+
                         {
-                            continue;
-                        }
-
-                        Feature mateFeat = (Feature)SingleMate;
-                        int errorCodes = mateFeat.GetErrorCode();
-                        bool[] isSuppressed = mateFeat.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, null);
-                        string mateName = mateFeat.Name;
-
-                        if (suppressedMatesSet.Contains(mateName))
-
-                        {
-                            continue;
-                        }
-                        foreach (bool supressed in isSuppressed)
-                        {
-
-                            if (supressed)
+                            if (!(SingleMate is Mate2))
                             {
-                                MateSuppress.Add($"Mate '{mateName}' is SUPPRESSED");
+                                continue;
                             }
-                            else
+                            Feature mateFeat = (Feature)SingleMate;
+                            int mateErrorCode = mateFeat.GetErrorCode();
+                            bool mateIsSuppressed = mateFeat.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, null)[0];
+                            string mateName = mateFeat.Name;
+                            if (suppressedMatesSet.Contains(mateName))
                             {
-                                MateSuppress.Add($"Mate '{mateName}' is NOT suppressed");
+                                continue;
+                            }
+
+                            if (mateErrorCode != 0 && mateIsSuppressed==false)
+                            {
+                                currentComponentInfo.FoundError = true;
+                                currentComponentInfo.ConstraintStatus = "FULLY DEFINED WITH MATE ERRORS";
+                                currentAssemblyResult.FoundComponentErrors = true;
+                                currentAssemblyResult.TotalComponentErrors.Add(currentComponentInfo);
                             }
                         }
 
-                        if (errorCodes != 0 && componenetError == 0)
-                        {
-                            componenetError = 1;
-                            componentErrors.Add($"  {formattedSwComponentName} PROPERLY DEFINED BUT HAS MATE ERRORS ");
-                            componentErrors.Add($"Mate: {mateFeat.Name} errorNUM: {componenetError} comp: {swComponent.Name2}");
-                            continue;
-                        }
 
-                        previousMate = mateFeat.Name;
                     }
 
-
+                 
                 }
 
-                if (componenetError != 0)
-                {
-                    if (mateErrors.Count > 0)
-                    {
-                        //releaseReport.WriteToReport(mateSpace);
-                        //releaseReport.WriteToReport(mateErrors);
 
-                    }
-                    if (componenetError != 0)
-                    {
-                        validRelease = 1;
-                    }
-                }
             }
 
 
-            return validRelease;
+            return currentAssemblyResult;
         }
         public DrawingValidationResult CheckDrawing(ModelDoc2 doc, string filePath)
         {
             DrawingValidationResult currentDrawingResult = new DrawingValidationResult();
+            if (doc == null)
+            {
+                currentDrawingResult.CriticalError = true;
+                return currentDrawingResult;
+            }
             ModelDocExtension swModExt = default(ModelDocExtension);
             int danglingCount = 0;
             bool annotationsSeleted = false;
@@ -227,18 +228,15 @@ namespace SolidworksAddTest
 
             swSelmgr = (SelectionMgr)doc.SelectionManager;
             swModExt = (ModelDocExtension)doc.Extension;
-            //deleteAnnotations = true;
+            //bool deleteAnnotations = true;
+            bool deleteAnnotations = false;
             int sheetIdx = 0;
 
             swSelData = swSelmgr.CreateSelectData();
 
 
 
-            if (doc == null)
-            {
-                currentDrawingResult.CriticalError = true;
-                return currentDrawingResult;
-            }
+      
             int totalAnnotations = 0;
             DrawingDoc swDrawingDoc = (DrawingDoc)doc;
             object[] sheets = ThisSolidworksService.GetDrawingSheets(swDrawingDoc);
@@ -299,12 +297,16 @@ namespace SolidworksAddTest
 
             }
 
-            /*
             if (deleteAnnotations)
             {
                 ThisSolidworksService.DeleteAllSelections(doc);
+                bool saveStatus = ThisSolidworksService.SaveSWDocument(doc);
+                if (!saveStatus)
+                {
+                    MessageBox.Show("Coulnt Save");
+                }
             }
-            */
+       
             return currentDrawingResult;
         }
         private bool DanglingValidation(Annotation currentAnnotation, SelectionMgr swSelmgr, SelectData swSelData,
@@ -347,46 +349,64 @@ namespace SolidworksAddTest
         {
             PartValidationResult currentPartResult = new PartValidationResult();
             PartDoc swPart = (PartDoc)doc;
+            string[] configurationNames = ThisSolidworksService.GetConfigurationNames(doc);
             if (swPart == null)
             {
                 currentPartResult.CriticalError = true;
                 return currentPartResult;
             }
-            Feature currentFeature = (Feature)swPart.FirstFeature();
-            if (currentFeature == null)
+            foreach (string configurationName in configurationNames)
             {
-                currentPartResult.CriticalError = true;
-                return currentPartResult;
-            }
-            Feature currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
-            while (currentFeature != null)
-            {
-                if (currentFeature.GetSpecificFeature2() is Sketch)
-                {
-                    Sketch currentFeatureSketch = (Sketch)currentFeature.GetSpecificFeature2();
-                    int constrinStatus = (int)currentFeatureSketch.GetConstrainedStatus();
+                swPart = (PartDoc)doc;
+                bool configSwitch = doc.ShowConfiguration2(configurationName);
+                Configuration activeConfiguration = doc.GetActiveConfiguration();
+
+                if (!configSwitch &  activeConfiguration.Name!=configurationName)
+                { 
+                    currentPartResult.CriticalError = true;
+
+                    return currentPartResult;
                 }
-                currentFeature.GetSpecificFeature();
-                currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
-                while (currentSubFeature != null)
+                Feature currentFeature = (Feature)swPart.FirstFeature();
+                if (currentFeature == null)
                 {
-                    if (currentSubFeature.GetSpecificFeature2() is Sketch)
+                    currentPartResult.CriticalError = true;
+                    return currentPartResult;
+                }
+                Feature currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
+                while (currentFeature != null)
+                {
+                    if (currentFeature.GetSpecificFeature2() is Sketch)
                     {
-                        Sketch currentSubFeatureSketch = (Sketch)currentSubFeature.GetSpecificFeature2();
-                        string featureType = currentFeature.GetTypeName2();
-                        int subConstrainStatus = (int)currentSubFeatureSketch.GetConstrainedStatus();
-                        if ((!ThisSolidworksService.FeatureTypeExceptions.Contains(featureType)) && subConstrainStatus!=3)
-                        {
-                            PartFeatureInfo currentFeatureInfo = new PartFeatureInfo(currentFeature.Name, currentSubFeature.Name);
-                            currentPartResult.FoundFeatureErrors = true;
-                            currentPartResult.TotalSketchErrors.Add(currentFeatureInfo);
-                        }
-                  
+                        Sketch currentFeatureSketch = (Sketch)currentFeature.GetSpecificFeature2();
+                        int constrinStatus = (int)currentFeatureSketch.GetConstrainedStatus();
                     }
-                    currentSubFeature = currentSubFeature.GetNextSubFeature();
+                    currentFeature.GetSpecificFeature();
+                    currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
+                    bool[] isFeatureSuppressed = currentFeature.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, configurationName);
+
+                    while (currentSubFeature != null && !isFeatureSuppressed[0])
+                    {
+                        if (currentSubFeature.GetSpecificFeature2() is Sketch)
+                        {
+                            Sketch currentSubFeatureSketch = (Sketch)currentSubFeature.GetSpecificFeature2();
+                            string featureType = currentFeature.GetTypeName2();
+                            int subConstrainStatus = (int)currentSubFeatureSketch.GetConstrainedStatus();
+                            if ((!ThisSolidworksService.FeatureTypeExceptions.Contains(featureType)) && subConstrainStatus != 3)
+                            {
+                                PartFeatureInfo currentFeatureInfo = new PartFeatureInfo(currentFeature.Name, currentSubFeature.Name, configurationName);
+                                currentPartResult.FoundFeatureErrors = true;
+                                currentPartResult.TotalSketchErrors.Add(currentFeatureInfo);
+                            }
+
+                        }
+                        currentSubFeature = currentSubFeature.GetNextSubFeature();
+                    }
+                    currentFeature = currentFeature.GetNextFeature();
                 }
-                currentFeature = currentFeature.GetNextFeature();
             }
+
+
             return currentPartResult;
 
         }

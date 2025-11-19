@@ -13,13 +13,25 @@ namespace SolidworksAddTest
     public class SolidworksService
     {
         SldWorks SolidWorksApp { get; set; }
+
+        ConfigurationManager ConfigManager { get; set; }
         public Dictionary<int, string> ReleaseAnnotations {  get; set; }
+        public const string PARTFILEEXT = ".SLDPRT";
+        public const string ASSEMBLYFILEEXT = ".SLDASM";
+        public const string DRAWINGFILEEXT = ".SLDDRW";
+
+
+
         public HashSet<string> FeatureTypeExceptions { get; set; }
+
 
         public SolidworksService(SldWorks solidworksApp)
         {
 
             SolidWorksApp = solidworksApp;
+
+
+   
 
             ReleaseAnnotations = new Dictionary<int, string>();
             ReleaseAnnotations[(int)swAnnotationType_e.swNote] = "Balloon";
@@ -38,7 +50,6 @@ namespace SolidworksAddTest
 
             FeatureTypeExceptions = new HashSet<string>();
 
-            FeatureTypeExceptions.Add("EdgeFlange");
             FeatureTypeExceptions.Add("FlatPattern");
             
         }
@@ -46,6 +57,8 @@ namespace SolidworksAddTest
         {
             try
             {
+                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent | (int)swOpenDocOptions_e.swOpenDocOptions_LoadModel;
+
                 if (SolidWorksApp == null)
                 {
                     MessageBox.Show("Parent add-in is not set.");
@@ -64,7 +77,7 @@ namespace SolidworksAddTest
                 int docType = (int)swDocumentTypes_e.swDocASSEMBLY;
 
                 // Open the document
-                ModelDoc2 doc = OpenFile(filepath, docType);
+                ModelDoc2 doc = OpenFile(filepath, docType, options);
 
 
                 ModelDocExtension swDocExt = doc.Extension;
@@ -78,9 +91,8 @@ namespace SolidworksAddTest
                 return null;
             }
         }
-        public ModelDoc2 OpenFile(string filepath, int docType)
+        public ModelDoc2 OpenFile(string filepath, int docType, int options)
         {
-            int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent;
             int configuration = 0;
             string configName = "";
             int errors = 0;
@@ -170,7 +182,7 @@ namespace SolidworksAddTest
            string[] DepList = SolidWorksApp.GetDocumentDependencies2(DocName, false, false, false);
             return DepList;
         }
-        public HashSet<string> getSuppressedMates(ModelDoc2 doc)
+        public HashSet<string> getSuppressedComponentMates(ModelDoc2 doc)
         {
             AssemblyDoc currentAssembly = (AssemblyDoc)doc;
             object[] Mates = null;
@@ -181,7 +193,7 @@ namespace SolidworksAddTest
             foreach (object component in components)
             {
                 Component2 swComponent = (Component2)component;
-                if (swComponent.IsSuppressed()) continue;
+                if (!swComponent.IsSuppressed()) continue;
                 Mates = (Object[])swComponent.GetMates();
                 if (Mates == null) continue;
                 foreach (object mate in Mates)
@@ -214,14 +226,14 @@ namespace SolidworksAddTest
 
                 // Define document type and options
 
-                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent | (int)swOpenDocOptions_e.swOpenDocOptions_LoadModel;
+                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent;
                 int configuration = 0;
                 string configName = "";
                 int errors = 0;
                 int warnings = 0;
 
                 // Open the document
-                ModelDoc2 doc = OpenFile(filepath,(int)swDocumentTypes_e.swDocPART);
+                ModelDoc2 doc = OpenFile(filepath,(int)swDocumentTypes_e.swDocPART, options);
 
                 if (doc != null)
                 {
@@ -263,7 +275,7 @@ namespace SolidworksAddTest
                 SolidWorksApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swAutomaticDrawingViewUpdate, false);
                 // Define document type and options
 
-                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent | (int)swOpenDocOptions_e.swOpenDocOptions_LoadModel;
+                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent  | (int)swOpenDocOptions_e.swOpenDocOptions_OpenDetailingMode;
                 int configuration = 0;
                 string configName = "";
                 int errors = 0;
@@ -352,6 +364,15 @@ namespace SolidworksAddTest
                 return "Unidentified Release Annotation Found";
             }
         }
-        
+        public string[] GetConfigurationNames(ModelDoc2 doc)
+        {
+            string[] configNames = doc.GetConfigurationNames();
+            return configNames;
+        }
+        public bool SaveSWDocument(ModelDoc2 doc)
+        {
+            return doc.Save3((int)swSaveAsOptions_e.swSaveAsOptions_Silent, 0, 0);
+
+        }
     }
 }

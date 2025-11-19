@@ -3,36 +3,40 @@
   "WorkspaceRootPath": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\ecnprocessservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\ecnprocessservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\ecnprocessservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\releasevalidationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\releasevalidationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\releasevalidationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\solidworksservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\solidworksservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\solidworksservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|c:\\users\\zacv\\source\\repos\\solidworksaddtest\\solidworksaddtest\\ecnrelease.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\ecnrelease.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\ecnprocessservice.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\ecnprocessservice.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\releasereport.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\releasereport.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\ecnprocessservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\ecnprocessservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\ecnprocessservice.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\ecnprocessservice.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\taskpanehostui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A6B100B-584C-42E7-97F1-01A6AADF0D77}|SolidworksAddTest\\SolidworksAddTest.csproj|solutionrelative:solidworksaddtest\\swtestrp.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -41,22 +45,9 @@
       "VerticalTabListWidth": 256,
       "DocumentGroups": [
         {
-          "DockedWidth": 207,
-          "SelectedChildIndex": 1,
+          "DockedWidth": 199,
+          "SelectedChildIndex": 0,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "TaskpaneHostUI.cs",
-              "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\TaskpaneHostUI.cs",
-              "RelativeDocumentMoniker": "SolidworksAddTest\\TaskpaneHostUI.cs",
-              "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\TaskpaneHostUI.cs",
-              "RelativeToolTip": "SolidworksAddTest\\TaskpaneHostUI.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFMAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-30T15:31:52.973Z",
-              "EditorCaption": ""
-            },
             {
               "$type": "Document",
               "DocumentIndex": 2,
@@ -65,28 +56,53 @@
               "RelativeDocumentMoniker": "SolidworksAddTest\\SolidworksService.cs",
               "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\SolidworksService.cs",
               "RelativeToolTip": "SolidworksAddTest\\SolidworksService.cs",
-              "ViewState": "AgIAABAAAAAAAAAAAIAywCkAAAA1AAAAAAAAAA==",
+              "ViewState": "AgIAACwAAAAAAAAAAAAAAHABAAA/AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-12T15:01:14.825Z",
+              "IsPinned": true,
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
+              "Title": "TaskpaneHostUI.cs",
+              "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\TaskpaneHostUI.cs",
+              "RelativeDocumentMoniker": "SolidworksAddTest\\TaskpaneHostUI.cs",
+              "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\TaskpaneHostUI.cs",
+              "RelativeToolTip": "SolidworksAddTest\\TaskpaneHostUI.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-30T15:31:52.973Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "ReleaseReport.cs",
               "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\ReleaseReport.cs",
               "RelativeDocumentMoniker": "SolidworksAddTest\\ReleaseReport.cs",
               "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\ReleaseReport.cs",
               "RelativeToolTip": "SolidworksAddTest\\ReleaseReport.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAE8AAAA1AAAAAAAAAA==",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABIAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-13T19:08:37.295Z",
+              "WhenOpened": "2025-11-13T19:08:37.295Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "EcnRelease.cs",
+              "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\EcnRelease.cs",
+              "RelativeDocumentMoniker": "SolidworksAddTest\\EcnRelease.cs",
+              "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\EcnRelease.cs",
+              "RelativeToolTip": "SolidworksAddTest\\EcnRelease.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAAABwAAAAyAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-18T21:33:26.258Z",
               "EditorCaption": ""
             }
           ]
         },
         {
-          "DockedWidth": 193,
+          "DockedWidth": 201,
           "SelectedChildIndex": 1,
           "Children": [
             {
@@ -109,7 +125,7 @@
               "RelativeDocumentMoniker": "SolidworksAddTest\\EcnProcessService.cs",
               "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\EcnProcessService.cs",
               "RelativeToolTip": "SolidworksAddTest\\EcnProcessService.cs",
-              "ViewState": "AgIAAEsBAAAAAAAAAAAYwGoBAAAhAAAAAAAAAA==",
+              "ViewState": "AgIAAFMBAAAAAAAAAAAuwG8BAACSAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-18T16:52:10.394Z",
               "EditorCaption": ""
@@ -122,27 +138,26 @@
               "RelativeDocumentMoniker": "SolidworksAddTest\\ReleaseValidationService.cs",
               "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\ReleaseValidationService.cs",
               "RelativeToolTip": "SolidworksAddTest\\ReleaseValidationService.cs",
-              "ViewState": "AgIAAF8BAAAAAAAAAAAgwH0BAABYAAAAAAAAAA==",
+              "ViewState": "AgIAAHMBAAAAAAAAAAAQwIkBAABpAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-12T16:04:44.392Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 4,
               "Title": "EcnProcessService.Designer.cs",
               "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\EcnProcessService.Designer.cs",
               "RelativeDocumentMoniker": "SolidworksAddTest\\EcnProcessService.Designer.cs",
               "ToolTip": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\EcnProcessService.Designer.cs",
               "RelativeToolTip": "SolidworksAddTest\\EcnProcessService.Designer.cs",
-              "ViewState": "AgIAAAsAAAAAAAAAAEBUwA4AAAAJAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-18T16:35:27.78Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-18T16:35:27.78Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 8,
               "Title": "SWTestRP.cs",
               "DocumentMoniker": "C:\\Users\\zacv\\source\\repos\\SolidworksAddTest\\SolidworksAddTest\\SWTestRP.cs",
               "RelativeDocumentMoniker": "SolidworksAddTest\\SWTestRP.cs",

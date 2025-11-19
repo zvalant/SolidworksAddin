@@ -68,7 +68,6 @@ namespace SolidworksAddTest
             DateTime endTime = DateTime.Now;
             int runtime = (int)(endTime - startTime).TotalMilliseconds;
 
-            MessageBox.Show($"Runtime: {runtime/1000}.{runtime%1000} s");
         }
         private int RunRelease() 
         {
@@ -78,11 +77,16 @@ namespace SolidworksAddTest
 
             var testReleaseList = new List<string>();
             string folderPath = $@"C:\Users\zacv\Documents\releaseTest\{ThisEcnRelease.ReleaseNumber}";
-
+            //prevent active open files from being included
             foreach (string file in Directory.GetFiles(folderPath))
             {
+                if (GetFileWithExt(file)[0] == '~') 
+                {
+                    continue;
+                }
                 testReleaseList.Add(file);
             }
+
 
             //NEED TO DO**provide validation that files in folder are for ecn and all files required for ecn are present
             
@@ -96,13 +100,13 @@ namespace SolidworksAddTest
                 ThisEcnRelease.AddFile(currentFileObj, currentFileObj.FileName);
                 switch (Path.GetExtension(currentFile))
                 {
-                    case ".SLDPRT":
+                    case SolidworksService.PARTFILEEXT:
                         currentFileObj.DocumentType = swDocumentTypes_e.swDocPART;
                         break;
-                    case ".SLDASM":
+                    case SolidworksService.ASSEMBLYFILEEXT:
                         currentFileObj.DocumentType = swDocumentTypes_e.swDocASSEMBLY;
                         break;
-                    case ".SLDDRW":
+                    case SolidworksService.DRAWINGFILEEXT:
                         currentFileObj.DocumentType = swDocumentTypes_e.swDocDRAWING;
                         break;
                     default:
@@ -145,36 +149,33 @@ namespace SolidworksAddTest
             
             while (ThisEcnRelease.ProcessingFileQueue.Count > 0)
             {
+                int releaseStatus = 0;
                 var currentFile = ThisEcnRelease.ProcessFilesPop();
-                if (ThisEcnRelease.CompletedFiles.Contains(currentFile))
+                if (ThisEcnRelease.CompletedFiles.Contains(currentFile) || currentFile.LoadedFilesRemaining>0)
                 {
                     continue;
                 }
-                if (currentFile.LoadedFilesRemaining > 0)
-                {
-                    continue;
-                }
+    
                 ThisSolidworksService.ApplySearchPaths(currentFile.SearchPaths);
-                //ApplySWSearchPaths(currentFile.SearchPaths);
-                int releaseStatus = ReleaseFile(currentFile);
+                ThisEcnRelease.PushOpenFileStack(currentFile);
+                releaseStatus = ReleaseFile(currentFile);
                 if (releaseStatus != 0)
                 {
-                    return 1;
+                    goto FinishRelease;
                 }
                 ThisEcnRelease.AddCompletedFile(currentFile);
-                if (currentFile.Parents.Count < 1)
-                {
-                    ThisSolidworksService.CloseFile(currentFile.FilePath);
-                }
-                
                 foreach (EcnFile ParentFile in currentFile.Parents)
                 {
                     if (ParentFile.DocumentType == swDocumentTypes_e.swDocDRAWING && ParentFile.LoadedFilesRemaining == 1)
                     {
-                        ReleaseFile(ParentFile);
+                        releaseStatus = ReleaseFile(ParentFile);
+                        if(releaseStatus != 0)
+                        {
+                            goto FinishRelease;
+                        }
+
                         ThisSolidworksService.CloseFile(ParentFile.FilePath);
                         ThisEcnRelease.AddCompletedFile(ParentFile);
-                        //thisRelease.ProcessFilesPush(file);
 
                     }
                     else 
@@ -184,16 +185,44 @@ namespace SolidworksAddTest
                     ParentFile.LoadedFilesRemaining--;
 
                 }
-                ThisSolidworksService.CloseFile(currentFile.FilePath);
-
-
+                
+                while (ThisEcnRelease.OpenFilesStack.Count > 0)
+                {
+                    int parentsCompleted = 0;
+                    EcnFile openFileCurrent = ThisEcnRelease.OpenFilesStack.Peek();
+                    foreach (EcnFile parent in openFileCurrent.Parents)
+                    {
+                        if (ThisEcnRelease.CompletedFiles.Contains(parent))
+                        {
+                            parentsCompleted++;
+                        }
+                    }
+                    if (parentsCompleted >= openFileCurrent.Parents.Count)
+                    {
+                        ThisEcnRelease.OpenFilesStack.Pop();
+                        ThisSolidworksService.CloseFile(openFileCurrent.FilePath);
+                    }
+                    else 
+                    {
+                        break;
+                    }
+                }
+                
             }
 
 
+        
+        FinishRelease:
             ThisSolidworksService.CloseAllDocuments();
-
-
-
+            ThisReleaseReport.FinishReport();
+            ThisReleaseReport.OpenReport();
+            
+            /*
+            foreach (EcnFile file in ThisEcnRelease.LeafFiles)
+            {
+                FileTraversal(file, file.FilePath);
+            }
+            */
             return 0;
         }
 
@@ -208,7 +237,7 @@ namespace SolidworksAddTest
             HashSet<string> dependencies = new HashSet<string>();
             Dictionary<string, int> folderCount = new Dictionary<string, int>();
             var folderPriority = new List<(int count, string folderPath)>();
-            GetDependenciesAndLeafs(filepath, dependencies, folderCount , currentFile);
+            GetDependenciesAndLeaves(filepath, dependencies, folderCount , currentFile);
             int dependenciesCount = dependencies.Count;
             foreach (KeyValuePair<string, int> path in folderCount)
             {
@@ -237,7 +266,7 @@ namespace SolidworksAddTest
         }
 
         //may want to split up leaves from this in future
-        private void GetDependenciesAndLeafs(string DocName, HashSet<string> dependencies, Dictionary<string, int> folderCount, EcnFile currentFile)
+        private void GetDependenciesAndLeaves(string DocName, HashSet<string> dependencies, Dictionary<string, int> folderCount, EcnFile currentFile)
         {
             try
             {
@@ -267,11 +296,11 @@ namespace SolidworksAddTest
                             {
                                 ThisEcnRelease.RemoveLeafFile(currentFile);
                             }
-                            GetDependenciesAndLeafs(currentDependent, dependencies, folderCount, dependentFileObj);
+                            GetDependenciesAndLeaves(currentDependent, dependencies, folderCount, dependentFileObj);
                         }
                         else 
                         {
-                            GetDependenciesAndLeafs(currentDependent, dependencies, folderCount, currentFile);
+                            GetDependenciesAndLeaves(currentDependent, dependencies, folderCount, currentFile);
                         }
                     }
                 }
@@ -315,6 +344,8 @@ namespace SolidworksAddTest
 
         private int ReleaseFile(EcnFile file)
         {
+            List<string> reportLines = new List<string>();
+            reportLines.Add($"{file.FilePath}");
             int releaseResult = 0;
             swDocumentTypes_e docType = file.DocumentType;
             switch (docType)
@@ -322,12 +353,44 @@ namespace SolidworksAddTest
                 case swDocumentTypes_e.swDocPART:
                     ModelDoc2 activePart = ThisSolidworksService.OpenPart(file.FilePath);
                     PartValidationResult partReleaseResult = ThisReleaseValidationService.CheckPart(activePart, file.FilePath);
+                    if (partReleaseResult.CriticalError)
+                    {
+                        reportLines.Add($"Validation Status: CRITICAL ERROR \n COULD NOT RUN VALIDATION");
+                        releaseResult = 1;
+                    }
+                    else if (partReleaseResult.FoundFeatureErrors)
+                    {
+                        reportLines.Add($"Validation Status: Failed");
 
+                        foreach (PartFeatureInfo partInfo in partReleaseResult.TotalSketchErrors)
+                        {
+                            //MessageBox.Show($"{partInfo.FeatureName}, {partInfo.SketchName} is not properly defined");
+                            reportLines.Add($" \t{partInfo.ConfigurationName} - {partInfo.FeatureName}, {partInfo.SketchName} NOT PROPERLY DEFINED");
+                            releaseResult = 1;
 
+                        }
+                    }
                     break;
                 case swDocumentTypes_e.swDocASSEMBLY:
                     ModelDoc2 activeAssy = ThisSolidworksService.OpenAssembly(file.FilePath);
-                    releaseResult = ThisReleaseValidationService.CheckAssembly(activeAssy);
+                    AssemblyValidationResult assemblyReleaseResult = ThisReleaseValidationService.CheckAssembly(activeAssy);
+                    if (assemblyReleaseResult.CritalError)
+                    {
+                        reportLines.Add($"Validation Status: CRITICAL ERROR \n COULD NOT RUN VALIDATION");
+                        releaseResult = 1;
+
+                    }
+                    if (assemblyReleaseResult.FoundComponentErrors)
+
+                    {
+                        reportLines.Add($"Validation Status: Failed");
+                        foreach (ComponentInfo componentError in assemblyReleaseResult.TotalComponentErrors)
+                        {
+                            reportLines.Add($"\t-{componentError.Name}({componentError.Configuration}) - {componentError.ConstraintStatus}");
+                        }
+                        releaseResult = 1;
+
+                    }
 
                     break;
                 case swDocumentTypes_e.swDocDRAWING:
@@ -336,12 +399,13 @@ namespace SolidworksAddTest
                     DrawingValidationResult drawingReleaseResult = ThisReleaseValidationService.CheckDrawing(activeDrawing, file.FilePath);
                     if (drawingReleaseResult.CriticalError)
                     {
-                        MessageBox.Show("Crit ERROR!");
+                        reportLines.Add($"Validation Status: CRITICAL ERROR \n COULD NOT RUN VALIDATION");
+                        releaseResult = 1;
                     }
                     else if(drawingReleaseResult.FoundDanglingAnnotations)
                     {
-                        List<string> reportLines = new List<string>();
-                        reportLines.Add($"{file.FilePath}\rValidation Status: Failed\n");
+                        reportLines.Add($"Validation Status: Failed");
+                        releaseResult = 1;
                         foreach (SheetInfo currentSheetInfo in drawingReleaseResult.TotalSheets) 
                         {
                             string currentSheetName = currentSheetInfo.Name;
@@ -359,24 +423,27 @@ namespace SolidworksAddTest
                                 foreach (string annotationtype in currentViewInfo.AnnotationCount.Keys)
                                 {
                                     reportLines.Add($"\t{currentSheetName}, {currentViewName} - {currentViewInfo.AnnotationCount[annotationtype]} dangling {annotationtype}(s)");
-
                                 }
                             }
                         }
 
-                        releaseResult = 0;
-                        ThisReleaseReport.WriteToReport(reportLines);
 
                     }
+                    /*
+                    if (drawingReleaseResult.FoundDanglingAnnotations)
+                    {
+                        ThisSolidworksService.DeleteAllSelections(activeDrawing);
+
+                    }
+                    */
                     break;
                 default:
                     break;
             }
+            //ThisSolidworksService.CloseFile(file.FilePath);
             if (releaseResult != 0)
             {
-                ThisSolidworksService.CloseFile(file.FilePath);
-                ThisReleaseReport.FinishReport();
-                ThisReleaseReport.OpenReport();
+                ThisReleaseReport.WriteToReport(reportLines);
                 return 1;
             }
             return 0;
@@ -409,14 +476,14 @@ namespace SolidworksAddTest
                 
                 
             }
-            /*
+            
             if (canClose)
             {
-                CloseSWFile(filePath);
+                ThisSolidworksService.CloseFile(filePath);
 
 
             }
-            */
+            
             ThisSolidworksService.CloseFile(filePath);
 
         }
