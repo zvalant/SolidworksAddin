@@ -46,7 +46,7 @@ namespace SolidworksAddTest
         public void InitalizeRelease()
         {
             //testReleaseNumber will need to be changed to be ui input dependent along with other release options.
-            string testReleaseNumber = "50001";
+            string testReleaseNumber = "52585";
             int releaseMode = 0;
             ThisSolidworksService = new SolidworksService(parentAddin.SolidWorksApplication);
             ThisEcnRelease = new EcnRelease(testReleaseNumber, releaseMode);
@@ -76,7 +76,11 @@ namespace SolidworksAddTest
             InitalizeRelease();
 
             var testReleaseList = new List<string>();
-            string folderPath = $@"C:\Users\zacv\Documents\releaseTest\{ThisEcnRelease.ReleaseNumber}";
+            ClearEcnLocalFolder(ThisEcnRelease.ReleaseFolderTemp, true);
+            CopyEcnFolder(ThisEcnRelease.ReleaseFolderSrc, ThisEcnRelease.ReleaseFolderTemp);
+
+            string folderPath = ThisEcnRelease.ReleaseFolderTemp;
+            
             //prevent active open files from being included
             foreach (string file in Directory.GetFiles(folderPath))
             {
@@ -210,12 +214,12 @@ namespace SolidworksAddTest
                 
             }
 
-
         
         FinishRelease:
             ThisSolidworksService.CloseAllDocuments();
             ThisReleaseReport.FinishReport();
             ThisReleaseReport.OpenReport();
+            ClearEcnLocalFolder(folderPath, false);
             
             /*
             foreach (EcnFile file in ThisEcnRelease.LeafFiles)
@@ -247,7 +251,7 @@ namespace SolidworksAddTest
             folderPriority.Sort();
             folderPriority.Reverse();
             List<string> searchPathPriority = new List<string>();
-            searchPathPriority.Add(thisRelease.ReleaseFolder);
+            searchPathPriority.Add(thisRelease.ReleaseFolderTemp);
             for (int i = 0; i < folderPriority.Count; i++)
             {
                 searchPathPriority.Add(folderPriority[i].folderPath);
@@ -388,6 +392,7 @@ namespace SolidworksAddTest
                         {
                             reportLines.Add($"\t-{componentError.Name}({componentError.Configuration}) - {componentError.ConstraintStatus}");
                         }
+                        ThisSolidworksService.MoveSWFile(ThisEcnRelease.ReleaseFolderTemp, ThisEcnRelease.ReleaseFolderSrc);
                         releaseResult = 1;
 
                     }
@@ -487,10 +492,54 @@ namespace SolidworksAddTest
             ThisSolidworksService.CloseFile(filePath);
 
         }
+        public void CopyEcnFolder(string sourceFolder, string destFolder)
+        {
+            try
+            {
+                if (!Directory.Exists(sourceFolder))
+                {
+                    MessageBox.Show($"Source folder does not exist {sourceFolder}");
+                    return;
+                }
+
+                Directory.CreateDirectory(destFolder);
+
+                foreach (string file in Directory.GetFiles(sourceFolder))
+                {
+                    string fileName = Path.GetFileName(file);
+                    string destFile = Path.Combine(destFolder, fileName);
+                    File.Copy(file, destFile, true);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error copying folder: {ex.Message}");
+            }
+        }
+        public void ClearEcnLocalFolder(string tempFolder, bool startup)
+        {
+            try
+            {
+                if (Directory.Exists(tempFolder))
+                {
+                    Directory.Delete(tempFolder, true); 
+                }
+
+                if (startup)
+                {
+                    Directory.CreateDirectory(tempFolder);
+
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error clearing temp folder: {ex.Message}");
+            }
+        }
 
 
-        // Helper method to interpret error codes
-       
+
 
     }
 }

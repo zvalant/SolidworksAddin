@@ -22,7 +22,9 @@ namespace SolidworksAddTest
 
 
 
+        public HashSet<string> SubFeatureTypeExceptions { get; set; }
         public HashSet<string> FeatureTypeExceptions { get; set; }
+
 
 
         public SolidworksService(SldWorks solidworksApp)
@@ -48,10 +50,16 @@ namespace SolidworksAddTest
             ReleaseAnnotations[(int)swAnnotationType_e.swLeader] = "General Leader";
             ReleaseAnnotations[(int)swAnnotationType_e.swCustomSymbol] = "Custom Symbol";
 
-            FeatureTypeExceptions = new HashSet<string>();
+            SubFeatureTypeExceptions = new HashSet<string>();
 
-            FeatureTypeExceptions.Add("FlatPattern");
-            
+            SubFeatureTypeExceptions.Add("FlatPattern");
+            SubFeatureTypeExceptions.Add("RefPlane");
+            SubFeatureTypeExceptions.Add("RefAxis");
+
+
+            FeatureTypeExceptions = new HashSet<string>();
+            FeatureTypeExceptions.Add("ProfileFeature");
+            FeatureTypeExceptions.Add("MirrorStock");
         }
         public ModelDoc2 OpenAssembly(string filepath)
         {
@@ -186,23 +194,24 @@ namespace SolidworksAddTest
         {
             AssemblyDoc currentAssembly = (AssemblyDoc)doc;
             object[] Mates = null;
-
-            object[] components = currentAssembly.GetComponents(true);
-
             HashSet<string> suppressedMatesResult = new HashSet<string>();
-            foreach (object component in components)
+            object[] components = currentAssembly.GetComponents(true);
+            if (components != null)
             {
-                Component2 swComponent = (Component2)component;
-                if (!swComponent.IsSuppressed()) continue;
-                Mates = (Object[])swComponent.GetMates();
-                if (Mates == null) continue;
-                foreach (object mate in Mates)
+                foreach (object component in components)
                 {
-                    Feature mateFeat = (Feature)mate;
-                    suppressedMatesResult.Add(mateFeat.Name);
+                    Component2 swComponent = (Component2)component;
+                    if (!swComponent.IsSuppressed()) continue;
+                    Mates = (Object[])swComponent.GetMates();
+                    if (Mates == null) continue;
+                    foreach (object mate in Mates)
+                    {
+                        Feature mateFeat = (Feature)mate;
+                        suppressedMatesResult.Add(mateFeat.Name);
+
+                    }
 
                 }
-
             }
             return suppressedMatesResult;
         }
@@ -373,6 +382,19 @@ namespace SolidworksAddTest
         {
             return doc.Save3((int)swSaveAsOptions_e.swSaveAsOptions_Silent, 0, 0);
 
+        }
+        public int MoveSWFile(string srcFile, string dstFile)
+        {
+            try
+            {
+                File.Copy(srcFile, dstFile, true);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error moving SW file: {ex.Message}");
+                return 1;
+            }
+            return 0;
         }
     }
 }

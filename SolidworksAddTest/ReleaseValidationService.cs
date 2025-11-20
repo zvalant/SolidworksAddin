@@ -122,10 +122,12 @@ namespace SolidworksAddTest
                 bool configSwitch = doc.ShowConfiguration2(configurationName);
                 Configuration activeConfiguration = doc.GetActiveConfiguration();
                 AssemblyDoc currentAssembly = (AssemblyDoc)doc;
+                if (activeConfiguration.IsSpeedPak()) continue;
                 Feature currentFeature = doc.FirstFeature();
                 object[] components = currentAssembly.GetComponents(true);
                 object[] Mates = null;
                 HashSet<string> suppressedMatesSet = new HashSet<string>();
+
                 suppressedMatesSet = ThisSolidworksService.getSuppressedComponentMates(doc);
 
                 if (!configSwitch & activeConfiguration.Name != configurationName)
@@ -229,7 +231,7 @@ namespace SolidworksAddTest
             swSelmgr = (SelectionMgr)doc.SelectionManager;
             swModExt = (ModelDocExtension)doc.Extension;
             //bool deleteAnnotations = true;
-            bool deleteAnnotations = false;
+            bool deleteAnnotations = true;
             int sheetIdx = 0;
 
             swSelData = swSelmgr.CreateSelectData();
@@ -292,19 +294,17 @@ namespace SolidworksAddTest
                         }
                     }
                 }
+                if (deleteAnnotations)
+                {
+                    ThisSolidworksService.DeleteAllSelections(doc);
+                }
                 sheetIdx++;
 
 
             }
-
             if (deleteAnnotations)
             {
-                ThisSolidworksService.DeleteAllSelections(doc);
-                bool saveStatus = ThisSolidworksService.SaveSWDocument(doc);
-                if (!saveStatus)
-                {
-                    MessageBox.Show("Coulnt Save");
-                }
+                ThisSolidworksService.SaveSWDocument(doc);
             }
        
             return currentDrawingResult;
@@ -322,27 +322,19 @@ namespace SolidworksAddTest
                     if (currentNote.IsBomBalloon() || currentNote.IsStackedBalloon())
                     {
                         validAnnotationCheck = false;
-                        return false;
                     }
                 }
                 else
                 {
                     validAnnotationCheck = false;
-                    return false;
                 }
 
             }
             else
             {
                 validAnnotationCheck = true;
-                return true;
             }
-            if (!validAnnotationCheck)
-            {
-                //select annotation that did not pass validation.
-                currentAnnotation.Select3(true, swSelData);
-            }
-
+            
             return validAnnotationCheck;
         }
         public PartValidationResult CheckPart(ModelDoc2 doc, string filepath)
@@ -376,23 +368,27 @@ namespace SolidworksAddTest
                 Feature currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
                 while (currentFeature != null)
                 {
+
                     if (currentFeature.GetSpecificFeature2() is Sketch)
                     {
                         Sketch currentFeatureSketch = (Sketch)currentFeature.GetSpecificFeature2();
                         int constrinStatus = (int)currentFeatureSketch.GetConstrainedStatus();
                     }
+
+               
+                   
                     currentFeature.GetSpecificFeature();
+                    string currentFeatureType = currentFeature.GetTypeName2();
                     currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
                     bool[] isFeatureSuppressed = currentFeature.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, configurationName);
-
-                    while (currentSubFeature != null && !isFeatureSuppressed[0])
+                    while (currentSubFeature != null && !isFeatureSuppressed[0] && !ThisSolidworksService.FeatureTypeExceptions.Contains(currentFeatureType))
                     {
                         if (currentSubFeature.GetSpecificFeature2() is Sketch)
                         {
                             Sketch currentSubFeatureSketch = (Sketch)currentSubFeature.GetSpecificFeature2();
                             string featureType = currentFeature.GetTypeName2();
                             int subConstrainStatus = (int)currentSubFeatureSketch.GetConstrainedStatus();
-                            if ((!ThisSolidworksService.FeatureTypeExceptions.Contains(featureType)) && subConstrainStatus != 3)
+                            if ((!ThisSolidworksService.SubFeatureTypeExceptions.Contains(featureType)) && subConstrainStatus != 3)
                             {
                                 PartFeatureInfo currentFeatureInfo = new PartFeatureInfo(currentFeature.Name, currentSubFeature.Name, configurationName);
                                 currentPartResult.FoundFeatureErrors = true;

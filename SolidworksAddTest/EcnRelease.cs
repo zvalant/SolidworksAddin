@@ -9,7 +9,8 @@ namespace SolidworksAddTest
     public class EcnRelease
     {
         public string ReleaseNumber { get; set; }
-        public string ReleaseFolder { get; set; }
+        public string ReleaseFolderSrc { get; set; }
+        public string ReleaseFolderTemp { get; set; }
         public int ReleaseType { get; set; }
 
         public Dictionary<string, EcnFile> Files { get; set; }
@@ -21,7 +22,8 @@ namespace SolidworksAddTest
         {
             ReleaseNumber = releaseNumber;
             ReleaseType = releaseType;
-            ReleaseFolder = $"C:\\Users\\zacv\\Documents\\releaseTest\\{releaseNumber}";
+            ReleaseFolderSrc = $"R:\\{releaseNumber}";
+            ReleaseFolderTemp = $"C:\\Users\\zacv\\Documents\\releaseTest\\{releaseNumber}";
             Files = new Dictionary<string, EcnFile>();
             LeafFiles = new HashSet<EcnFile>();
             CompletedFiles = new HashSet<EcnFile>();
