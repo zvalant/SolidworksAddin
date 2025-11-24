@@ -1,6 +1,7 @@
 ﻿using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,10 +9,23 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SolidworksAddTest
+
+#region ValidationResultClasses
 {
-    public class DrawingValidationResult
+    /// <summary>
+    ///  Contains all classes involving the validation results and their internal subclasses
+    /// </summary>
+    public class ValidationResultBase
     {
         public bool CriticalError { get; set; }
+
+        public ValidationResultBase()
+        {
+            CriticalError = false;
+        }
+    }
+    public class DrawingValidationResult : ValidationResultBase
+    {
         public bool FoundDanglingAnnotations { get; set; }
         public List<SheetInfo> TotalSheets { get; set; }
 
@@ -22,35 +36,31 @@ namespace SolidworksAddTest
             TotalSheets = new List<SheetInfo>();
         }
     }
-    public class PartValidationResult
+    public class PartValidationResult : ValidationResultBase
     {
-        public bool CriticalError { get; set; }
         public bool FoundFeatureErrors { get; set; }
         public List<PartFeatureInfo> TotalSketchErrors { get; set; }
         public PartValidationResult()
-        { 
-            CriticalError=false;
-            FoundFeatureErrors=false;
+        {
+            FoundFeatureErrors = false;
             TotalSketchErrors = new List<PartFeatureInfo>();
         }
     }
-    public class AssemblyValidationResult
+    public class AssemblyValidationResult : ValidationResultBase
     {
-        public bool CritalError { get; set; }
         public bool FoundComponentErrors { get; set; }
         public List<ComponentInfo> TotalComponentErrors { get; set; }
         public AssemblyValidationResult()
         {
-            CritalError = false;
             FoundComponentErrors = false;
             TotalComponentErrors = new List<ComponentInfo>();
         }
     }
     public class ComponentInfo
-    { 
+    {
         public string Name { get; set; }
         public string ConstraintStatus { get; set; }
-        public string Configuration {  get; set; }
+        public string Configuration { get; set; }
         public bool FoundError { get; set; }
         public ComponentInfo(string componentName, string constraintStatus, string configuration)
         {
@@ -65,8 +75,8 @@ namespace SolidworksAddTest
         public string FeatureName { get; set; }
         public string SketchName { get; set; }
         public string ConfigurationName { get; set; }
-        public PartFeatureInfo(string featureName, string sketchName, string configurationName) 
-        { 
+        public PartFeatureInfo(string featureName, string sketchName, string configurationName)
+        {
             FeatureName = featureName;
             SketchName = sketchName;
             ConfigurationName = configurationName;
@@ -101,6 +111,98 @@ namespace SolidworksAddTest
 
         }
     }
+    #endregion
+    public class ValidationBase
+    {
+        protected SolidworksService ThisSolidworksService {get;set;}
+
+        public ValidationBase(SolidworksService thisSolidworksService)
+            
+        {
+            ThisSolidworksService = thisSolidworksService;
+        }
+    }
+
+    public class PartValidation: ValidationBase
+    {
+        public PartValidation(SolidworksService thisSolidworksService) : base(thisSolidworksService)
+        {
+            return;
+        }
+
+        public PartValidationResult RunPartValidation(ModelDoc2 doc)
+        {
+         
+            PartValidationResult currentPartResult = new PartValidationResult();
+            PartDoc swPart = (PartDoc)doc;
+            string[] configurationNames = ThisSolidworksService.GetConfigurationNames(doc);
+            if (swPart == null)
+            {
+                currentPartResult.CriticalError = true;
+                return currentPartResult;
+            }
+            foreach (string configurationName in configurationNames)
+            {
+                swPart = (PartDoc)doc;
+                bool configSwitch = doc.ShowConfiguration2(configurationName);
+                Configuration activeConfiguration = doc.GetActiveConfiguration();
+
+                if (!configSwitch & activeConfiguration.Name != configurationName)
+                {
+                    currentPartResult.CriticalError = true;
+
+                    return currentPartResult;
+                }
+                Feature currentFeature = (Feature)swPart.FirstFeature();
+                if (currentFeature == null)
+                {
+                    currentPartResult.CriticalError = true;
+                    return currentPartResult;
+                }
+                Feature currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
+                while (currentFeature != null)
+                {
+
+                    if (currentFeature.GetSpecificFeature2() is Sketch)
+                    {
+                        Sketch currentFeatureSketch = (Sketch)currentFeature.GetSpecificFeature2();
+                        int constrinStatus = (int)currentFeatureSketch.GetConstrainedStatus();
+                    }
+
+
+
+                    currentFeature.GetSpecificFeature();
+                    string currentFeatureType = currentFeature.GetTypeName2();
+                    currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
+                    bool[] isFeatureSuppressed = currentFeature.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, configurationName);
+                    while (currentSubFeature != null && !isFeatureSuppressed[0] && !ThisSolidworksService.FeatureTypeExceptions.Contains(currentFeatureType))
+                    {
+                        if (currentSubFeature.GetSpecificFeature2() is Sketch)
+                        {
+                            Sketch currentSubFeatureSketch = (Sketch)currentSubFeature.GetSpecificFeature2();
+                            string featureType = currentFeature.GetTypeName2();
+                            int subConstrainStatus = (int)currentSubFeatureSketch.GetConstrainedStatus();
+                            if ((!ThisSolidworksService.SubFeatureTypeExceptions.Contains(featureType)) && subConstrainStatus != 3)
+                            {
+                                PartFeatureInfo currentFeatureInfo = new PartFeatureInfo(currentFeature.Name, currentSubFeature.Name, configurationName);
+                                currentPartResult.FoundFeatureErrors = true;
+                                currentPartResult.TotalSketchErrors.Add(currentFeatureInfo);
+                            }
+
+                        }
+                        currentSubFeature = currentSubFeature.GetNextSubFeature();
+                    }
+                    currentFeature = currentFeature.GetNextFeature();
+                }
+            }
+
+
+            return currentPartResult;
+
+        }
+
+    }
+    
     public class ReleaseValidationService
     {
         private SolidworksService ThisSolidworksService { get; set; }
@@ -132,7 +234,7 @@ namespace SolidworksAddTest
 
                 if (!configSwitch & activeConfiguration.Name != configurationName)
                 {
-                    currentAssemblyResult.CritalError = true;
+                    currentAssemblyResult.CriticalError = true;
                     return currentAssemblyResult;
                 }
                 foreach (object component in components)
@@ -255,6 +357,7 @@ namespace SolidworksAddTest
                 string currentSheetName = sheetNames[sheetIdx];
                 SheetInfo currentSheetInfo = new SheetInfo(currentSheetName);
                 currentDrawingResult.TotalSheets.Add(currentSheetInfo);
+                bool sheetSet = swDrawingDoc.ActivateSheet(currentSheetName);
 
                 foreach (object view in sheetObj)
                 {
@@ -298,6 +401,7 @@ namespace SolidworksAddTest
                 {
                     ThisSolidworksService.DeleteAllSelections(doc);
                 }
+                
                 sheetIdx++;
 
 
@@ -337,76 +441,64 @@ namespace SolidworksAddTest
             
             return validAnnotationCheck;
         }
-        public PartValidationResult CheckPart(ModelDoc2 doc, string filepath)
+
+        public int DependentValidation(string docPath, string releaseFolder, Dictionary<string, int> folderCount)
+
         {
-            PartValidationResult currentPartResult = new PartValidationResult();
-            PartDoc swPart = (PartDoc)doc;
-            string[] configurationNames = ThisSolidworksService.GetConfigurationNames(doc);
-            if (swPart == null)
+            string[] pathSegments = docPath.Split(Path.DirectorySeparatorChar);
+            string fileNameWithExt = pathSegments[pathSegments.Length - 1];
+            string folderKey = "";
+            string archiveFolder = pathSegments[0] + "\\" + pathSegments[1];
+            if (pathSegments[0].Substring(0, 2) == "M:")
             {
-                currentPartResult.CriticalError = true;
-                return currentPartResult;
-            }
-            foreach (string configurationName in configurationNames)
-            {
-                swPart = (PartDoc)doc;
-                bool configSwitch = doc.ShowConfiguration2(configurationName);
-                Configuration activeConfiguration = doc.GetActiveConfiguration();
-
-                if (!configSwitch &  activeConfiguration.Name!=configurationName)
-                { 
-                    currentPartResult.CriticalError = true;
-
-                    return currentPartResult;
-                }
-                Feature currentFeature = (Feature)swPart.FirstFeature();
-                if (currentFeature == null)
+                if (pathSegments.Length >1)
                 {
-                    currentPartResult.CriticalError = true;
-                    return currentPartResult;
-                }
-                Feature currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
-                while (currentFeature != null)
-                {
-
-                    if (currentFeature.GetSpecificFeature2() is Sketch)
+                    if (int.TryParse(pathSegments[1], out int result))
                     {
-                        Sketch currentFeatureSketch = (Sketch)currentFeature.GetSpecificFeature2();
-                        int constrinStatus = (int)currentFeatureSketch.GetConstrainedStatus();
+                        folderKey = pathSegments[1];
                     }
-
-               
-                   
-                    currentFeature.GetSpecificFeature();
-                    string currentFeatureType = currentFeature.GetTypeName2();
-                    currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
-                    bool[] isFeatureSuppressed = currentFeature.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, configurationName);
-                    while (currentSubFeature != null && !isFeatureSuppressed[0] && !ThisSolidworksService.FeatureTypeExceptions.Contains(currentFeatureType))
-                    {
-                        if (currentSubFeature.GetSpecificFeature2() is Sketch)
-                        {
-                            Sketch currentSubFeatureSketch = (Sketch)currentSubFeature.GetSpecificFeature2();
-                            string featureType = currentFeature.GetTypeName2();
-                            int subConstrainStatus = (int)currentSubFeatureSketch.GetConstrainedStatus();
-                            if ((!ThisSolidworksService.SubFeatureTypeExceptions.Contains(featureType)) && subConstrainStatus != 3)
-                            {
-                                PartFeatureInfo currentFeatureInfo = new PartFeatureInfo(currentFeature.Name, currentSubFeature.Name, configurationName);
-                                currentPartResult.FoundFeatureErrors = true;
-                                currentPartResult.TotalSketchErrors.Add(currentFeatureInfo);
-                            }
-
-                        }
-                        currentSubFeature = currentSubFeature.GetNextSubFeature();
-                    }
-                    currentFeature = currentFeature.GetNextFeature();
                 }
             }
+            //Will have to change if archive mapping changes
+            else if ((docPath.Length > 21 && docPath.Substring(0, 22) == "S:\\Engineering\\Archive" )
+                || archiveFolder == releaseFolder)
+            {
+                foreach (string pathSegment in pathSegments)
+                {
+                    if (int.TryParse(pathSegment, out int result))
+                    {
+                        folderKey = pathSegment;
+                    }
+                }
+     
+            }
+            //This cannot be removed from virtual name and solidworks does not allow rename to include ^ char
+            else if (fileNameWithExt.Contains('^'))
+            {
+                return 0;
+            }
+            else
+            {
 
+                return -1;
+            }
+            if (folderKey.Length > 0)
+            {
+                if (folderCount.ContainsKey(folderKey))
+                {
+                    folderCount[folderKey] += 1;
+                }
+                else
+                {
+                    folderCount[folderKey] = 1;
+                }
+            }
+            return 0;
 
-            return currentPartResult;
 
         }
     }
+
 }
 
 

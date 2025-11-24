@@ -3,6 +3,7 @@ using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -32,6 +33,10 @@ namespace SolidworksAddTest
             private SWTestRP parentAddin;
         public SolidworksService ThisSolidworksService { get; set; }
         public ReleaseValidationService ThisReleaseValidationService { get; set; }
+        private PartValidation ThisPartValidation {  get; set; }
+        //private AssemblyValidation ThisAssemblyValidation { get; set; }
+        //private DrawingValidation ThisDrawingValidation { get; set; }
+
         public EcnRelease ThisEcnRelease { get; set; }
 
         public ReleaseReport ThisReleaseReport { get; set; }
@@ -46,13 +51,15 @@ namespace SolidworksAddTest
         public void InitalizeRelease()
         {
             //testReleaseNumber will need to be changed to be ui input dependent along with other release options.
-            string testReleaseNumber = "52585";
+            string testReleaseNumber = "52572";
+
+
+
             int releaseMode = 0;
             ThisSolidworksService = new SolidworksService(parentAddin.SolidWorksApplication);
             ThisEcnRelease = new EcnRelease(testReleaseNumber, releaseMode);
             ThisReleaseReport = new ReleaseReport(testReleaseNumber, releaseMode);
             ThisReleaseValidationService = new ReleaseValidationService(ThisSolidworksService);
-
         }
         public void SetParentAddin(SWTestRP parent)
         {
@@ -124,8 +131,16 @@ namespace SolidworksAddTest
 
             {
                 EcnFile currentFile = ThisEcnRelease.Files[fileName];
-                List<string> fileSearchPaths = GetSearchPath(ThisEcnRelease.Files[fileName].FilePath, ThisEcnRelease, currentFile);
+                List<string> fileSearchPaths = SearchPathAndGraphGeneration(ThisEcnRelease.Files[fileName].FilePath, ThisEcnRelease, currentFile);
+                if (fileSearchPaths.Count == 1 && fileSearchPaths[0] == "-1")
+                {
+                    List<string> reportLines = new List<string>();
+                    reportLines.Add($"{fileName} as bad reference!");
+                    ThisReleaseReport.WriteToReport(reportLines);
+                    goto FinishRelease;
+                }
                 currentFile.InsertSearchPaths(fileSearchPaths);
+                ThisEcnRelease.LeafFiles.Add(currentFile);
                 
             }
 
@@ -230,8 +245,9 @@ namespace SolidworksAddTest
             return 0;
         }
 
-        private List<string> GetSearchPath(string filepath, EcnRelease thisRelease, EcnFile currentFile)
+        private List<string> SearchPathAndGraphGeneration(string filepath, EcnRelease thisRelease, EcnFile currentFile)
         {
+            List<string> reportLines = new List<string>();
             //This will be replaced with ecn folder 
             if (parentAddin == null)
             {
@@ -241,7 +257,13 @@ namespace SolidworksAddTest
             HashSet<string> dependencies = new HashSet<string>();
             Dictionary<string, int> folderCount = new Dictionary<string, int>();
             var folderPriority = new List<(int count, string folderPath)>();
-            GetDependenciesAndLeaves(filepath, dependencies, folderCount , currentFile);
+            int dependenciesResult = GetDependenciesAndParents(filepath, dependencies, folderCount , currentFile);
+            if (dependenciesResult != 0)
+            {
+                reportLines.Add($"{filepath} as incorrect references above");
+                return new List<string>{ "-1"};
+                
+            }
             int dependenciesCount = dependencies.Count;
             foreach (KeyValuePair<string, int> path in folderCount)
             {
@@ -255,7 +277,6 @@ namespace SolidworksAddTest
             for (int i = 0; i < folderPriority.Count; i++)
             {
                 searchPathPriority.Add(folderPriority[i].folderPath);
-
             }
 
             string[] archiveFolders = Directory.GetDirectories(@"M:/");
@@ -270,17 +291,16 @@ namespace SolidworksAddTest
         }
 
         //may want to split up leaves from this in future
-        private void GetDependenciesAndLeaves(string DocName, HashSet<string> dependencies, Dictionary<string, int> folderCount, EcnFile currentFile)
+        private int GetDependenciesAndParents(string DocName, HashSet<string> dependencies, Dictionary<string, int> folderCount, EcnFile currentFile)
         {
             try
             {
-
+                List<string> reportLines = new List<string>();
                 string[] DepList = ThisSolidworksService.GetDocumentDependencies(DocName);
 
                 if (DepList == null || DepList.Length == 0)
                 {
-                        ThisEcnRelease.AddLeafFile(currentFile);
-                    return;
+                    return 0;
                 }
                 for (int i = 0; i < DepList.Length; i += 2)
                 {
@@ -289,23 +309,28 @@ namespace SolidworksAddTest
 
                     if (!dependencies.Contains(currentDependent))
                     {
-                
-                        ParsePath(currentDependent, folderCount);
+
+                        int refResult = ThisReleaseValidationService.DependentValidation(currentDependent, ThisEcnRelease.ReleaseFolderSrc ,folderCount);
+                        if (refResult != 0)
+                        {
+                            reportLines.Add($"{currentDependent} is wrong external reference for {ThisEcnRelease.ReleaseFolderTemp}/{currentFile.FileName}");
+                            ThisReleaseReport.WriteToReport(reportLines);
+                            
+                            return 1;
+                        }
                         dependencies.Add(currentDependent);
                         if (ThisEcnRelease.Files.ContainsKey(currentFileDependent))
                         {
                             var dependentFileObj = ThisEcnRelease.Files[currentFileDependent];
                             dependentFileObj.InsertParent(currentFile);
-                            if (ThisEcnRelease.LeafFiles.Contains(currentFile))
-                            {
-                                ThisEcnRelease.RemoveLeafFile(currentFile);
-                            }
-                            GetDependenciesAndLeaves(currentDependent, dependencies, folderCount, dependentFileObj);
+                            GetDependenciesAndParents(currentDependent, dependencies, folderCount, dependentFileObj);
                         }
                         else 
                         {
-                            GetDependenciesAndLeaves(currentDependent, dependencies, folderCount, currentFile);
+                            GetDependenciesAndParents(currentDependent, dependencies, folderCount, currentFile);
                         }
+
+
                     }
                 }
             }
@@ -313,7 +338,7 @@ namespace SolidworksAddTest
             {
                 MessageBox.Show($"Error Generating Dependencies: {ex.Message}");
             }
-            return;
+            return 0 ;
         }
         private string GetFileWithExt(string docName)
         {
@@ -322,29 +347,6 @@ namespace SolidworksAddTest
             return fileName;
 
         }
-
-        private void ParsePath(string docName, Dictionary<string, int> folderCount)
-
-        {
-            string[] path = docName.Split(new char[] {'\\' });
-
-            string archiveFolder = path[0]+"\\"+path[1];
-            
-            if (path[0] == "M:")
-            {
-                if (folderCount.ContainsKey(archiveFolder))
-                {
-                    folderCount[archiveFolder] += 1;
-                }
-                else 
-                {
-                    folderCount[archiveFolder] = 1;
-                }
-                
-            }
-
-        }
-        
 
         private int ReleaseFile(EcnFile file)
         {
@@ -355,8 +357,11 @@ namespace SolidworksAddTest
             switch (docType)
             {
                 case swDocumentTypes_e.swDocPART:
+                    
                     ModelDoc2 activePart = ThisSolidworksService.OpenPart(file.FilePath);
-                    PartValidationResult partReleaseResult = ThisReleaseValidationService.CheckPart(activePart, file.FilePath);
+                     PartValidation currentPartValidation = new PartValidation(ThisSolidworksService);
+
+                    PartValidationResult partReleaseResult = currentPartValidation.RunPartValidation(activePart);
                     if (partReleaseResult.CriticalError)
                     {
                         reportLines.Add($"Validation Status: CRITICAL ERROR \n COULD NOT RUN VALIDATION");
@@ -378,7 +383,7 @@ namespace SolidworksAddTest
                 case swDocumentTypes_e.swDocASSEMBLY:
                     ModelDoc2 activeAssy = ThisSolidworksService.OpenAssembly(file.FilePath);
                     AssemblyValidationResult assemblyReleaseResult = ThisReleaseValidationService.CheckAssembly(activeAssy);
-                    if (assemblyReleaseResult.CritalError)
+                    if (assemblyReleaseResult.CriticalError)
                     {
                         reportLines.Add($"Validation Status: CRITICAL ERROR \n COULD NOT RUN VALIDATION");
                         releaseResult = 1;
@@ -392,7 +397,6 @@ namespace SolidworksAddTest
                         {
                             reportLines.Add($"\t-{componentError.Name}({componentError.Configuration}) - {componentError.ConstraintStatus}");
                         }
-                        ThisSolidworksService.MoveSWFile(ThisEcnRelease.ReleaseFolderTemp, ThisEcnRelease.ReleaseFolderSrc);
                         releaseResult = 1;
 
                     }
@@ -434,13 +438,15 @@ namespace SolidworksAddTest
 
 
                     }
-                    /*
+                    
                     if (drawingReleaseResult.FoundDanglingAnnotations)
                     {
                         ThisSolidworksService.DeleteAllSelections(activeDrawing);
+                        ThisSolidworksService.MoveSWFile(file.FilePath, file.FileName, ThisEcnRelease.ReleaseFolderSrc);
+
 
                     }
-                    */
+
                     break;
                 default:
                     break;
@@ -489,7 +495,7 @@ namespace SolidworksAddTest
 
             }
             
-            ThisSolidworksService.CloseFile(filePath);
+            //ThisSolidworksService.CloseFile(filePath);
 
         }
         public void CopyEcnFolder(string sourceFolder, string destFolder)

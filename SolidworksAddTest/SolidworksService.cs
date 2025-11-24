@@ -20,20 +20,13 @@ namespace SolidworksAddTest
         public const string ASSEMBLYFILEEXT = ".SLDASM";
         public const string DRAWINGFILEEXT = ".SLDDRW";
 
-
-
         public HashSet<string> SubFeatureTypeExceptions { get; set; }
         public HashSet<string> FeatureTypeExceptions { get; set; }
-
-
 
         public SolidworksService(SldWorks solidworksApp)
         {
 
             SolidWorksApp = solidworksApp;
-
-
-   
 
             ReleaseAnnotations = new Dictionary<int, string>();
             ReleaseAnnotations[(int)swAnnotationType_e.swNote] = "Balloon";
@@ -55,6 +48,7 @@ namespace SolidworksAddTest
             SubFeatureTypeExceptions.Add("FlatPattern");
             SubFeatureTypeExceptions.Add("RefPlane");
             SubFeatureTypeExceptions.Add("RefAxis");
+
 
 
             FeatureTypeExceptions = new HashSet<string>();
@@ -137,11 +131,6 @@ namespace SolidworksAddTest
                 // CLEAR EXISTING SEARCH PATHS. 
                 SolidWorksApp.SetSearchFolders((int)swSearchFolderTypes_e.swDocumentType, null);
                 string searchFolders = SolidWorksApp.GetSearchFolders((int)swUserPreferenceToggle_e.swUseFolderSearchRules);
-
-
-
-
-
 
                 //VALIDATE PATHS EXIST
                 var validPaths = searchPathPriority.Where(path => Directory.Exists(path)).ToArray();
@@ -383,11 +372,12 @@ namespace SolidworksAddTest
             return doc.Save3((int)swSaveAsOptions_e.swSaveAsOptions_Silent, 0, 0);
 
         }
-        public int MoveSWFile(string srcFile, string dstFile)
+        public int MoveSWFile(string srcPath, string srcFileName, string dstFolder)
         {
             try
             {
-                File.Copy(srcFile, dstFile, true);
+                string fullDstPath = Path.Combine(dstFolder, srcFileName);
+                File.Copy(srcPath, fullDstPath, true);
             }
             catch (Exception ex)
             {
