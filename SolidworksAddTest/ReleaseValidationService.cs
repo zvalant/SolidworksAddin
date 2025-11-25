@@ -56,6 +56,11 @@ namespace SolidworksAddTest
             TotalComponentErrors = new List<ComponentInfo>();
         }
     }
+
+    public class SearchAndDependenciesValidationResult : ValidationResultBase
+    { 
+
+    }
     public class ComponentInfo
     {
         public string Name { get; set; }
@@ -122,7 +127,69 @@ namespace SolidworksAddTest
             ThisSolidworksService = thisSolidworksService;
         }
     }
+    public class SearchAndDependenciesValidation:ValidationBase
+    {
+        public SearchAndDependenciesValidation(SolidworksService thisSolidworksService): base(thisSolidworksService)
+        {
+            return;
+        }
+        public int DependentValidation(string docPath, string releaseFolder, Dictionary<string, int> folderCount)
 
+        {
+            string[] pathSegments = docPath.Split(Path.DirectorySeparatorChar);
+            string fileNameWithExt = pathSegments[pathSegments.Length - 1];
+            string folderKey = "";
+            string archiveFolder = pathSegments[0] + "\\" + pathSegments[1];
+            if (pathSegments[0].Substring(0, 2) == "M:")
+            {
+                if (pathSegments.Length > 1)
+                {
+                    if (int.TryParse(pathSegments[1], out int result))
+                    {
+                        folderKey = pathSegments[1];
+                    }
+                }
+            }
+            //Will have to change if archive mapping changes
+            else if ((docPath.Length > 21 && docPath.Substring(0, 22) == "S:\\Engineering\\Archive")
+                || archiveFolder == releaseFolder)
+            {
+                foreach (string pathSegment in pathSegments)
+                {
+                    if (int.TryParse(pathSegment, out int result))
+                    {
+                        folderKey = pathSegment;
+                    }
+                }
+
+            }
+            //This cannot be removed from virtual name and solidworks does not allow rename to include ^ char
+            else if (fileNameWithExt.Contains('^'))
+            {
+                return 0;
+            }
+            else
+            {
+
+                return -1;
+            }
+            if (folderKey.Length > 0)
+            {
+                if (folderCount.ContainsKey(folderKey))
+                {
+                    folderCount[folderKey] += 1;
+                }
+                else
+                {
+                    folderCount[folderKey] = 1;
+                }
+            }
+            return 0;
+
+
+        }
+
+    }
     public class PartValidation: ValidationBase
     {
         public PartValidation(SolidworksService thisSolidworksService) : base(thisSolidworksService)
@@ -324,6 +391,7 @@ namespace SolidworksAddTest
                 currentDrawingResult.CriticalError = true;
                 return currentDrawingResult;
             }
+            
             ModelDocExtension swModExt = default(ModelDocExtension);
             int danglingCount = 0;
             bool annotationsSeleted = false;
@@ -358,6 +426,11 @@ namespace SolidworksAddTest
                 SheetInfo currentSheetInfo = new SheetInfo(currentSheetName);
                 currentDrawingResult.TotalSheets.Add(currentSheetInfo);
                 bool sheetSet = swDrawingDoc.ActivateSheet(currentSheetName);
+                Sheet currentSheet = swDrawingDoc.GetCurrentSheet();
+                if (currentSheet.RevisionTable != null)
+                {
+                    MessageBox.Show($"{currentSheet.RevisionTable}");
+                }
 
                 foreach (object view in sheetObj)
                 {
@@ -442,61 +515,7 @@ namespace SolidworksAddTest
             return validAnnotationCheck;
         }
 
-        public int DependentValidation(string docPath, string releaseFolder, Dictionary<string, int> folderCount)
-
-        {
-            string[] pathSegments = docPath.Split(Path.DirectorySeparatorChar);
-            string fileNameWithExt = pathSegments[pathSegments.Length - 1];
-            string folderKey = "";
-            string archiveFolder = pathSegments[0] + "\\" + pathSegments[1];
-            if (pathSegments[0].Substring(0, 2) == "M:")
-            {
-                if (pathSegments.Length >1)
-                {
-                    if (int.TryParse(pathSegments[1], out int result))
-                    {
-                        folderKey = pathSegments[1];
-                    }
-                }
-            }
-            //Will have to change if archive mapping changes
-            else if ((docPath.Length > 21 && docPath.Substring(0, 22) == "S:\\Engineering\\Archive" )
-                || archiveFolder == releaseFolder)
-            {
-                foreach (string pathSegment in pathSegments)
-                {
-                    if (int.TryParse(pathSegment, out int result))
-                    {
-                        folderKey = pathSegment;
-                    }
-                }
-     
-            }
-            //This cannot be removed from virtual name and solidworks does not allow rename to include ^ char
-            else if (fileNameWithExt.Contains('^'))
-            {
-                return 0;
-            }
-            else
-            {
-
-                return -1;
-            }
-            if (folderKey.Length > 0)
-            {
-                if (folderCount.ContainsKey(folderKey))
-                {
-                    folderCount[folderKey] += 1;
-                }
-                else
-                {
-                    folderCount[folderKey] = 1;
-                }
-            }
-            return 0;
-
-
-        }
+        
     }
 
 }

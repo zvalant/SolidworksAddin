@@ -10,6 +10,11 @@ using System.Windows.Forms;
 
 namespace SolidworksAddTest
 {
+    public class SolidworksServiceResponse
+    {
+
+    }
+
     public class SolidworksService
     {
         SldWorks SolidWorksApp { get; set; }
@@ -273,7 +278,7 @@ namespace SolidworksAddTest
                 SolidWorksApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swAutomaticDrawingViewUpdate, false);
                 // Define document type and options
 
-                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent  | (int)swOpenDocOptions_e.swOpenDocOptions_OpenDetailingMode;
+                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent  ;
                 int configuration = 0;
                 string configName = "";
                 int errors = 0;

@@ -41,7 +41,7 @@ namespace SolidworksAddTest
 
         public ReleaseReport ThisReleaseReport { get; set; }
 
-
+        public Utility ThisUtility { get; set; }    
 
         public EcnProcessService()
             {
@@ -60,6 +60,7 @@ namespace SolidworksAddTest
             ThisEcnRelease = new EcnRelease(testReleaseNumber, releaseMode);
             ThisReleaseReport = new ReleaseReport(testReleaseNumber, releaseMode);
             ThisReleaseValidationService = new ReleaseValidationService(ThisSolidworksService);
+            ThisUtility = new Utility();
         }
         public void SetParentAddin(SWTestRP parent)
         {
@@ -91,7 +92,7 @@ namespace SolidworksAddTest
             //prevent active open files from being included
             foreach (string file in Directory.GetFiles(folderPath))
             {
-                if (GetFileWithExt(file)[0] == '~') 
+                if (ThisUtility.GetFileWithExt(file)[0] == '~') 
                 {
                     continue;
                 }
@@ -107,7 +108,7 @@ namespace SolidworksAddTest
                 string currentFile = testReleaseList[i];
                 var currentFileObj = new EcnFile();
                 currentFileObj.FilePath = testReleaseList[i];
-                currentFileObj.FileName = GetFileWithExt(currentFile);
+                currentFileObj.FileName = ThisUtility.GetFileWithExt(currentFile);
                 ThisEcnRelease.AddFile(currentFileObj, currentFileObj.FileName);
                 switch (Path.GetExtension(currentFile))
                 {
@@ -257,6 +258,8 @@ namespace SolidworksAddTest
             HashSet<string> dependencies = new HashSet<string>();
             Dictionary<string, int> folderCount = new Dictionary<string, int>();
             var folderPriority = new List<(int count, string folderPath)>();
+            SearchAndDependenciesValidationResult currentDependentValidationResult = 
+                new SearchAndDependenciesValidationResult();
             int dependenciesResult = GetDependenciesAndParents(filepath, dependencies, folderCount , currentFile);
             if (dependenciesResult != 0)
             {
@@ -276,7 +279,7 @@ namespace SolidworksAddTest
             searchPathPriority.Add(thisRelease.ReleaseFolderTemp);
             for (int i = 0; i < folderPriority.Count; i++)
             {
-                searchPathPriority.Add(folderPriority[i].folderPath);
+                searchPathPriority.Add($"M:/{folderPriority[i].folderPath}");
             }
 
             string[] archiveFolders = Directory.GetDirectories(@"M:/");
@@ -295,6 +298,8 @@ namespace SolidworksAddTest
         {
             try
             {
+                SearchAndDependenciesValidation currentValidation= new SearchAndDependenciesValidation(ThisSolidworksService);
+                HashSet<Tuple<string, string>> wrongExtRef = new HashSet<Tuple<string,string>>();
                 List<string> reportLines = new List<string>();
                 string[] DepList = ThisSolidworksService.GetDocumentDependencies(DocName);
 
@@ -305,15 +310,17 @@ namespace SolidworksAddTest
                 for (int i = 0; i < DepList.Length; i += 2)
                 {
                     string currentDependent = DepList[i + 1];
-                    string currentFileDependent = GetFileWithExt(currentDependent);
+                    string currentFileDependent = ThisUtility.GetFileWithExt(currentDependent);
 
                     if (!dependencies.Contains(currentDependent))
                     {
 
-                        int refResult = ThisReleaseValidationService.DependentValidation(currentDependent, ThisEcnRelease.ReleaseFolderSrc ,folderCount);
+                        int refResult = currentValidation.DependentValidation(currentDependent, ThisEcnRelease.ReleaseFolderSrc ,folderCount);
                         if (refResult != 0)
                         {
-                            reportLines.Add($"{currentDependent} is wrong external reference for {ThisEcnRelease.ReleaseFolderTemp}/{currentFile.FileName}");
+                            Tuple<string,string> CurrentReferrenceTuple = 
+                                new Tuple<string,string>(currentDependent, DocName);
+                            reportLines.Add($"{currentDependent} is wrong external reference for {DocName}");
                             ThisReleaseReport.WriteToReport(reportLines);
                             
                             return 1;
@@ -340,13 +347,7 @@ namespace SolidworksAddTest
             }
             return 0 ;
         }
-        private string GetFileWithExt(string docName)
-        {
-            string[] path = docName.Split(new char[] { '\\' });
-            string fileName = path[path.Length - 1];
-            return fileName;
-
-        }
+   
 
         private int ReleaseFile(EcnFile file)
         {
