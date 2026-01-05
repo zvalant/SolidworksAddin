@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.ExceptionServices;
 
 namespace SolidworksAddTest
 
@@ -50,15 +51,40 @@ namespace SolidworksAddTest
     {
         public bool FoundComponentErrors { get; set; }
         public List<ComponentInfo> TotalComponentErrors { get; set; }
+        public HashSet<int> ValidMateErrorCodes { get; set; }
         public AssemblyValidationResult()
         {
+            List<int> validErrorCodes = new List<int> { 0, 48 };
             FoundComponentErrors = false;
             TotalComponentErrors = new List<ComponentInfo>();
+            ValidMateErrorCodes = new HashSet<int>();
+            foreach (int code in validErrorCodes)
+            {
+                ValidMateErrorCodes.Add(code);
+            }
         }
     }
 
     public class SearchAndDependenciesValidationResult : ValidationResultBase
     { 
+        public List<string> ValidPaths { get; set; }
+        public List<Tuple<string,string>> InvalidDependencies { get; set; }
+        public bool FoundInvalidDependencies { get; set; }
+        public List<string> SearchPaths { get; set; }
+
+        public SearchAndDependenciesValidationResult(string releaseFolderTemp, string releaseFolderSrc)
+        {
+            ValidPaths = new List<string>();
+            ValidPaths.Add("S:\\Engineering\\Archive");
+            ValidPaths.Add("M:");
+            ValidPaths.Add(releaseFolderSrc);
+            ValidPaths.Add(releaseFolderTemp);
+            FoundInvalidDependencies = false;
+            // First String in Tuple is parent file and second is dependent.  
+            InvalidDependencies = new List<Tuple<string, string>>();
+            SearchPaths = new List<string>();   
+
+        }
 
     }
     public class ComponentInfo
@@ -86,8 +112,6 @@ namespace SolidworksAddTest
             SketchName = sketchName;
             ConfigurationName = configurationName;
         }
-
-
     }
     public class SheetInfo
     {
@@ -133,35 +157,45 @@ namespace SolidworksAddTest
         {
             return;
         }
-        public int DependentValidation(string docPath, string releaseFolder, Dictionary<string, int> folderCount)
+        public int DependentValidation(string referenceDocPath, string parentDocPath, Dictionary<string, int> folderCount, SearchAndDependenciesValidationResult currentValidationResult, EcnRelease ThisEcnRelease)
 
         {
-            string[] pathSegments = docPath.Split(Path.DirectorySeparatorChar);
-            string fileNameWithExt = pathSegments[pathSegments.Length - 1];
+            Utility utilityFunctions = new Utility();
+            string referenceFileName = utilityFunctions.GetFileWithExt(referenceDocPath);
+
             string folderKey = "";
-            string archiveFolder = pathSegments[0] + "\\" + pathSegments[1];
-            if (pathSegments[0].Substring(0, 2) == "M:")
+            /*paths segments will split up path by folders and drives this works for current file architecture 
+             * and may break down if file arechitecture changes.
+           */
+            string[] pathSegments = referenceDocPath.Split(Path.DirectorySeparatorChar);
+            string fileNameWithExt = pathSegments[pathSegments.Length - 1];
+            string pathWithoutFile = referenceDocPath.Substring(0, referenceDocPath.Length - fileNameWithExt.Length-1);
+            bool pathValidation = false;
+
+
+            foreach (string validPath in currentValidationResult.ValidPaths)
+            {
+                int dependentPathLen = referenceDocPath.Length;
+                if (dependentPathLen < validPath.Length)
+                {
+                    continue;
+                }
+                else if (validPath == referenceDocPath.Substring(0, validPath.Length) || ThisEcnRelease.FileNames.Contains(referenceFileName) || parentDocPath.Substring(0,validPath.Length) == validPath)
+                {
+                    pathValidation = true;
+                    
+                }
+            }
+            if (pathValidation)
             {
                 if (pathSegments.Length > 1)
                 {
                     if (int.TryParse(pathSegments[1], out int result))
                     {
                         folderKey = pathSegments[1];
-                    }
-                }
-            }
-            //Will have to change if archive mapping changes
-            else if ((docPath.Length > 21 && docPath.Substring(0, 22) == "S:\\Engineering\\Archive")
-                || archiveFolder == releaseFolder)
-            {
-                foreach (string pathSegment in pathSegments)
-                {
-                    if (int.TryParse(pathSegment, out int result))
-                    {
-                        folderKey = pathSegment;
-                    }
-                }
 
+                    }
+                }
             }
             //This cannot be removed from virtual name and solidworks does not allow rename to include ^ char
             else if (fileNameWithExt.Contains('^'))
@@ -170,8 +204,9 @@ namespace SolidworksAddTest
             }
             else
             {
-
-                return -1;
+                currentValidationResult.InvalidDependencies.Add(new Tuple<string,string>(parentDocPath, referenceDocPath));
+                currentValidationResult.FoundInvalidDependencies = true;
+                return 1;
             }
             if (folderKey.Length > 0)
             {
@@ -282,6 +317,7 @@ namespace SolidworksAddTest
         public AssemblyValidationResult CheckAssembly(ModelDoc2 doc)
         {
             AssemblyValidationResult currentAssemblyResult = new AssemblyValidationResult();
+            bool isWarning = true;
 
             string[] configurationNames = ThisSolidworksService.GetConfigurationNames(doc);
 
@@ -354,7 +390,7 @@ namespace SolidworksAddTest
                                 continue;
                             }
                             Feature mateFeat = (Feature)SingleMate;
-                            int mateErrorCode = mateFeat.GetErrorCode();
+                            int mateErrorCode = mateFeat.GetErrorCode2(out isWarning);
                             bool mateIsSuppressed = mateFeat.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, null)[0];
                             string mateName = mateFeat.Name;
                             if (suppressedMatesSet.Contains(mateName))
@@ -362,8 +398,9 @@ namespace SolidworksAddTest
                                 continue;
                             }
 
-                            if (mateErrorCode != 0 && mateIsSuppressed==false)
+                            if (!currentAssemblyResult.ValidMateErrorCodes.Contains(mateErrorCode) && mateIsSuppressed==false)
                             {
+                                MessageBox.Show($"{mateName} code: {mateErrorCode}");
                                 currentComponentInfo.FoundError = true;
                                 currentComponentInfo.ConstraintStatus = "FULLY DEFINED WITH MATE ERRORS";
                                 currentAssemblyResult.FoundComponentErrors = true;
@@ -429,7 +466,7 @@ namespace SolidworksAddTest
                 Sheet currentSheet = swDrawingDoc.GetCurrentSheet();
                 if (currentSheet.RevisionTable != null)
                 {
-                    MessageBox.Show($"{currentSheet.RevisionTable}");
+                    //MessageBox.Show($"{currentSheet.RevisionTable}");
                 }
 
                 foreach (object view in sheetObj)

@@ -15,6 +15,7 @@ namespace SolidworksAddTest
         public int ReleaseType { get; set; }
 
         public Dictionary<string, EcnFile> Files { get; set; }
+        public HashSet<string> FileNames {  get; set; }
         public HashSet<EcnFile> LeafFiles { get; set; }
         public HashSet<EcnFile> CompletedFiles { get; set; }
         public Queue<EcnFile> ProcessingFileQueue { get; set; }
@@ -27,6 +28,7 @@ namespace SolidworksAddTest
             ReleaseFolderTemp = $"C:\\releaseECN\\{releaseNumber}";
             ReleaseTxtFile = $"G:\\Parent ECR Files\\{releaseNumber}_Parent_ECN.txt";
             Files = new Dictionary<string, EcnFile>();
+            FileNames = new HashSet<string>();
             LeafFiles = new HashSet<EcnFile>();
             CompletedFiles = new HashSet<EcnFile>();
             ProcessingFileQueue = new Queue<EcnFile>();

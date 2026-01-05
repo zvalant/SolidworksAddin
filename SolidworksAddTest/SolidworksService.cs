@@ -278,7 +278,7 @@ namespace SolidworksAddTest
                 SolidWorksApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swAutomaticDrawingViewUpdate, false);
                 // Define document type and options
 
-                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent  ;
+                int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent;
                 int configuration = 0;
                 string configName = "";
                 int errors = 0;

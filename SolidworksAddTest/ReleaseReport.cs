@@ -47,12 +47,28 @@ namespace SolidworksAddTest
             {
                 using (System.IO.StreamWriter writer = new System.IO.StreamWriter(reportFilePath))
                 {
-                    writer.WriteLine("=".PadRight(60, '='));
                     writer.WriteLine($"ECN {ReleaseType}: {EcnNumber}");
+                    writer.WriteLine(reportFilePath);
                     writer.WriteLine("=".PadRight(60, '='));
                     writer.WriteLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                    writer.WriteLine();
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error creating report: {ex.Message}");
+            }
+        }
+        public void WriteSectionHeader(string sectionName)
+        {
+            try
+            {
+                List<string> reportLines = new List<string>();
+                
+                reportLines.Add("=".PadRight(60, '='));
+                reportLines.Add($"{sectionName}");
+                reportLines.Add("");
+                WriteToReport(reportLines);
+                
             }
             catch (Exception ex)
             {

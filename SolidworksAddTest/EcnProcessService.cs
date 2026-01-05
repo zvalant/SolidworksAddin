@@ -51,7 +51,7 @@ namespace SolidworksAddTest
         public void InitalizeRelease()
         {
             //testReleaseNumber will need to be changed to be ui input dependent along with other release options.
-            string testReleaseNumber = "52572";
+            string testReleaseNumber = "52635_test";
 
 
 
@@ -109,6 +109,7 @@ namespace SolidworksAddTest
                 var currentFileObj = new EcnFile();
                 currentFileObj.FilePath = testReleaseList[i];
                 currentFileObj.FileName = ThisUtility.GetFileWithExt(currentFile);
+                ThisEcnRelease.FileNames.Add(currentFileObj.FileName);
                 ThisEcnRelease.AddFile(currentFileObj, currentFileObj.FileName);
                 switch (Path.GetExtension(currentFile))
                 {
@@ -128,24 +129,56 @@ namespace SolidworksAddTest
                 //SetSearchPaths(currentFile);
                //ReleaseFile(currentFileObj);
             }
+            List<string> reportLines = new List<string>();
+            int invalidReferences = 0;
+            string sectionHeader = "Reference Validation";
+            bool validationStatus = true;
+            ThisReleaseReport.WriteSectionHeader(sectionHeader);
             foreach ( string fileName in ThisEcnRelease.Files.Keys)
 
             {
+                
                 EcnFile currentFile = ThisEcnRelease.Files[fileName];
-                List<string> fileSearchPaths = SearchPathAndGraphGeneration(ThisEcnRelease.Files[fileName].FilePath, ThisEcnRelease, currentFile);
-                if (fileSearchPaths.Count == 1 && fileSearchPaths[0] == "-1")
+                SearchAndDependenciesValidationResult DependenciesValidation = SearchPathAndGraphGeneration(ThisEcnRelease.Files[fileName].FilePath, ThisEcnRelease, currentFile);
+                if (DependenciesValidation.FoundInvalidDependencies)
                 {
-                    List<string> reportLines = new List<string>();
-                    reportLines.Add($"{fileName} as bad reference!");
-                    ThisReleaseReport.WriteToReport(reportLines);
-                    goto FinishRelease;
+                    invalidReferences++;
+                    validationStatus = false;
+                    foreach (Tuple<string,string> referencePair in DependenciesValidation.InvalidDependencies)
+                    {
+                        string parentFile = referencePair.Item1;
+                        string referenceFile = referencePair.Item2;
+                        reportLines.Add($"{referenceFile} is wrong reference for {parentFile}");
+                    }
                 }
-                currentFile.InsertSearchPaths(fileSearchPaths);
+                currentFile.InsertSearchPaths(DependenciesValidation.SearchPaths);
+
                 ThisEcnRelease.LeafFiles.Add(currentFile);
                 
             }
 
-            
+            if (validationStatus)
+            {
+                reportLines.Insert(0,("Validation Status: Passed"));
+                reportLines.Add("");
+            }
+            else
+            {
+                reportLines.Insert(0, ("Validation Status: Failed"));
+                reportLines.Add("");
+                ThisReleaseReport.WriteToReport(reportLines);
+                goto FinishRelease;
+            }
+            ThisReleaseReport.WriteToReport(reportLines);
+
+            //clear report lines since reference section is now complete
+
+            /*
+             * This is the Release File Validation Section
+             */
+            sectionHeader = "File Release Validation";
+            ThisReleaseReport.WriteSectionHeader(sectionHeader);
+
             foreach (EcnFile file in ThisEcnRelease.Files.Values)
 
             {
@@ -227,6 +260,9 @@ namespace SolidworksAddTest
                         break;
                     }
                 }
+                reportLines.Add("Validation Status: Passed");
+                ThisReleaseReport.WriteToReport(reportLines);
+                goto FinishRelease;
                 
             }
 
@@ -246,7 +282,7 @@ namespace SolidworksAddTest
             return 0;
         }
 
-        private List<string> SearchPathAndGraphGeneration(string filepath, EcnRelease thisRelease, EcnFile currentFile)
+        private SearchAndDependenciesValidationResult SearchPathAndGraphGeneration(string filepath, EcnRelease thisRelease, EcnFile currentFile)
         {
             List<string> reportLines = new List<string>();
             //This will be replaced with ecn folder 
@@ -258,16 +294,27 @@ namespace SolidworksAddTest
             HashSet<string> dependencies = new HashSet<string>();
             Dictionary<string, int> folderCount = new Dictionary<string, int>();
             var folderPriority = new List<(int count, string folderPath)>();
-            SearchAndDependenciesValidationResult currentDependentValidationResult = 
-                new SearchAndDependenciesValidationResult();
-            int dependenciesResult = GetDependenciesAndParents(filepath, dependencies, folderCount , currentFile);
-            if (dependenciesResult != 0)
+            SearchAndDependenciesValidationResult currentDependciesValidationResult = new SearchAndDependenciesValidationResult(thisRelease.ReleaseFolderTemp,thisRelease.ReleaseFolderSrc);
+            GetDependenciesAndParents(filepath, dependencies, folderCount , currentFile, currentDependciesValidationResult);
+            if (currentDependciesValidationResult.CriticalError)
             {
-                reportLines.Add($"{filepath} as incorrect references above");
-                return new List<string>{ "-1"};
+                reportLines.Add("Critical Errors Found while gathering dependencies");
+                return currentDependciesValidationResult;
                 
             }
             int dependenciesCount = dependencies.Count;
+            if (currentDependciesValidationResult.FoundInvalidDependencies)
+            {
+                foreach (Tuple<string,string> dependent in currentDependciesValidationResult.InvalidDependencies)
+                {
+                    string parent = dependent.Item1;
+                    string reference = dependent.Item2;
+
+                }
+                
+                    
+                
+            }
             foreach (KeyValuePair<string, int> path in folderCount)
             {
                 folderPriority.Add((path.Value, path.Key));
@@ -277,6 +324,7 @@ namespace SolidworksAddTest
             folderPriority.Reverse();
             List<string> searchPathPriority = new List<string>();
             searchPathPriority.Add(thisRelease.ReleaseFolderTemp);
+            searchPathPriority.Add(thisRelease.ReleaseFolderSrc);
             for (int i = 0; i < folderPriority.Count; i++)
             {
                 searchPathPriority.Add($"M:/{folderPriority[i].folderPath}");
@@ -287,54 +335,44 @@ namespace SolidworksAddTest
             {
                 searchPathPriority.Add(archiveFolder);
             }
+            currentDependciesValidationResult.SearchPaths = searchPathPriority;
 
 
-
-            return searchPathPriority;
+            return currentDependciesValidationResult;
         }
 
         //may want to split up leaves from this in future
-        private int GetDependenciesAndParents(string DocName, HashSet<string> dependencies, Dictionary<string, int> folderCount, EcnFile currentFile)
+        private void GetDependenciesAndParents(string docName, HashSet<string> dependencies, Dictionary<string, int> folderCount, EcnFile currentFile, SearchAndDependenciesValidationResult currentDependenciesValidationResult)
         {
             try
             {
-                SearchAndDependenciesValidation currentValidation= new SearchAndDependenciesValidation(ThisSolidworksService);
+                SearchAndDependenciesValidation currentValidation = new SearchAndDependenciesValidation(ThisSolidworksService);
                 HashSet<Tuple<string, string>> wrongExtRef = new HashSet<Tuple<string,string>>();
                 List<string> reportLines = new List<string>();
-                string[] DepList = ThisSolidworksService.GetDocumentDependencies(DocName);
-
-                if (DepList == null || DepList.Length == 0)
-                {
-                    return 0;
+                string[] DepList = ThisSolidworksService.GetDocumentDependencies(docName);
+                if (DepList == null)
+                { 
+                    return;
                 }
+      
                 for (int i = 0; i < DepList.Length; i += 2)
                 {
                     string currentDependent = DepList[i + 1];
                     string currentFileDependent = ThisUtility.GetFileWithExt(currentDependent);
-
                     if (!dependencies.Contains(currentDependent))
                     {
 
-                        int refResult = currentValidation.DependentValidation(currentDependent, ThisEcnRelease.ReleaseFolderSrc ,folderCount);
-                        if (refResult != 0)
-                        {
-                            Tuple<string,string> CurrentReferrenceTuple = 
-                                new Tuple<string,string>(currentDependent, DocName);
-                            reportLines.Add($"{currentDependent} is wrong external reference for {DocName}");
-                            ThisReleaseReport.WriteToReport(reportLines);
-                            
-                            return 1;
-                        }
+                        currentValidation.DependentValidation(currentDependent,docName, folderCount, currentDependenciesValidationResult, ThisEcnRelease);
                         dependencies.Add(currentDependent);
                         if (ThisEcnRelease.Files.ContainsKey(currentFileDependent))
                         {
                             var dependentFileObj = ThisEcnRelease.Files[currentFileDependent];
                             dependentFileObj.InsertParent(currentFile);
-                            GetDependenciesAndParents(currentDependent, dependencies, folderCount, dependentFileObj);
+                            GetDependenciesAndParents(currentDependent, dependencies, folderCount, dependentFileObj, currentDependenciesValidationResult);
                         }
                         else 
                         {
-                            GetDependenciesAndParents(currentDependent, dependencies, folderCount, currentFile);
+                            GetDependenciesAndParents(currentDependent, dependencies, folderCount, currentFile, currentDependenciesValidationResult);
                         }
 
 
@@ -343,16 +381,15 @@ namespace SolidworksAddTest
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error Generating Dependencies: {ex.Message}");
+                MessageBox.Show($"Error Generating Dependencies: {ex.Message}: {docName}");
             }
-            return 0 ;
+            return;
         }
    
 
         private int ReleaseFile(EcnFile file)
         {
             List<string> reportLines = new List<string>();
-            reportLines.Add($"{file.FilePath}");
             int releaseResult = 0;
             swDocumentTypes_e docType = file.DocumentType;
             switch (docType)
@@ -371,6 +408,7 @@ namespace SolidworksAddTest
                     else if (partReleaseResult.FoundFeatureErrors)
                     {
                         reportLines.Add($"Validation Status: Failed");
+                        reportLines.Add(file.FilePath);
 
                         foreach (PartFeatureInfo partInfo in partReleaseResult.TotalSketchErrors)
                         {
