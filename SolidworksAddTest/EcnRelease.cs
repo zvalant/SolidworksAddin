@@ -17,9 +17,11 @@ namespace SolidworksAddTest
         public Dictionary<string, EcnFile> Files { get; set; }
         public HashSet<string> FileNames {  get; set; }
         public HashSet<EcnFile> LeafFiles { get; set; }
-        public HashSet<EcnFile> CompletedFiles { get; set; }
+        public HashSet<EcnFile> ReleasedFiles { get; set; }
         public Queue<EcnFile> ProcessingFileQueue { get; set; }
         public Stack<EcnFile> OpenFilesStack { get; set; }
+        public HashSet<string> validReleaseExtensions { get; set; }
+
         public EcnRelease(string releaseNumber, int releaseType)
         {
             ReleaseNumber = releaseNumber;
@@ -30,9 +32,17 @@ namespace SolidworksAddTest
             Files = new Dictionary<string, EcnFile>();
             FileNames = new HashSet<string>();
             LeafFiles = new HashSet<EcnFile>();
-            CompletedFiles = new HashSet<EcnFile>();
+            ReleasedFiles = new HashSet<EcnFile>();
             ProcessingFileQueue = new Queue<EcnFile>();
             OpenFilesStack = new Stack<EcnFile>();
+            validReleaseExtensions = new HashSet<string>();
+
+            List<string> validReleaseExtensionsList = new List<string>{ "SLDPRT", "SLDASM", "SLDDRW" };
+            foreach (string validReleaseExtension in validReleaseExtensionsList)
+            {
+                validReleaseExtensions.Add(validReleaseExtension);
+            }
+
         }
 
         public void AddFile(EcnFile file, string fileName)
@@ -47,9 +57,9 @@ namespace SolidworksAddTest
         {
             LeafFiles.Remove(file);
         }
-        public void AddCompletedFile(EcnFile file)
+        public void AddReleasedFile(EcnFile file)
         {
-            CompletedFiles.Add(file);
+            ReleasedFiles.Add(file);
         }
         public void ProcessFilesPush(EcnFile file)
         {

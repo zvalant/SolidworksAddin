@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -92,11 +93,12 @@ namespace SolidworksAddTest
             //prevent active open files from being included
             foreach (string file in Directory.GetFiles(folderPath))
             {
-                if (ThisUtility.GetFileWithExt(file)[0] == '~') 
+                string fileName = ThisUtility.GetFileWithExt(file);
+                string fileExtension = ThisUtility.GetFileExt(file);
+                if (fileName[0] != '~' && ThisEcnRelease.validReleaseExtensions.Contains(fileExtension)) 
                 {
-                    continue;
+                    testReleaseList.Add(file);
                 }
-                testReleaseList.Add(file);
             }
 
 
@@ -137,7 +139,7 @@ namespace SolidworksAddTest
             foreach ( string fileName in ThisEcnRelease.Files.Keys)
 
             {
-                
+                reportLines.Add(fileName);
                 EcnFile currentFile = ThisEcnRelease.Files[fileName];
                 SearchAndDependenciesValidationResult DependenciesValidation = SearchPathAndGraphGeneration(ThisEcnRelease.Files[fileName].FilePath, ThisEcnRelease, currentFile);
                 if (DependenciesValidation.FoundInvalidDependencies)
@@ -154,30 +156,31 @@ namespace SolidworksAddTest
                 currentFile.InsertSearchPaths(DependenciesValidation.SearchPaths);
 
                 ThisEcnRelease.LeafFiles.Add(currentFile);
-                
-            }
 
-            if (validationStatus)
-            {
-                reportLines.Insert(0,("Validation Status: Passed"));
-                reportLines.Add("");
+            
             }
-            else
+            // after adding all leafs need to 
+
+
+            ThisReleaseReport.WriteValidationStatus(validationStatus, reportLines);
+            ThisReleaseReport.WriteToReport(reportLines);
+            reportLines.Clear();
+            if (!validationStatus)
             {
-                reportLines.Insert(0, ("Validation Status: Failed"));
-                reportLines.Add("");
-                ThisReleaseReport.WriteToReport(reportLines);
                 goto FinishRelease;
             }
-            ThisReleaseReport.WriteToReport(reportLines);
 
             //clear report lines since reference section is now complete
 
             /*
              * This is the Release File Validation Section
              */
+            reportLines.Clear();
             sectionHeader = "File Release Validation";
             ThisReleaseReport.WriteSectionHeader(sectionHeader);
+            HashSet<string> allFilesCheck = new HashSet<string>();
+            Queue<EcnFile> filesQueue = new Queue<EcnFile>();
+            
 
             foreach (EcnFile file in ThisEcnRelease.Files.Values)
 
@@ -193,59 +196,87 @@ namespace SolidworksAddTest
                 }
                 
             }
-            
+
             foreach (EcnFile file in ThisEcnRelease.LeafFiles)
             {
                 ThisEcnRelease.ProcessFilesPush(file);
+                filesQueue.Enqueue(file);
+                reportLines.Add($"{file.FileName} is Leaf and added to queue");
+            }
+            while (filesQueue.Count > 0)
+            {
+                EcnFile file = filesQueue.Dequeue();
+                reportLines.Add($"{file.FileName} is added to files queue");
+                foreach (EcnFile parentFile in file.Parents)
+                {
+                    reportLines.Add($"{parentFile.FileName} is PARENT OF {file.FileName}");
+                    filesQueue.Enqueue(parentFile);
+                }
 
+
+            }
+            ThisReleaseReport.WriteToReport(reportLines);
+            reportLines.Clear();
+            foreach (EcnFile file in ThisEcnRelease.LeafFiles)
+            {
+                ThisEcnRelease.ProcessFilesPush(file);
+                reportLines.Add($"{file.FileName} is leaf");
             }
             
             while (ThisEcnRelease.ProcessingFileQueue.Count > 0)
             {
+                foreach (EcnFile ecnFile in ThisEcnRelease.ProcessingFileQueue)
+                {
+                }
                 int releaseStatus = 0;
                 var currentFile = ThisEcnRelease.ProcessFilesPop();
-                if (ThisEcnRelease.CompletedFiles.Contains(currentFile) || currentFile.LoadedFilesRemaining>0)
+                if (ThisEcnRelease.ReleasedFiles.Contains(currentFile) || currentFile.LoadedFilesRemaining>0)
                 {
                     continue;
                 }
-    
                 ThisSolidworksService.ApplySearchPaths(currentFile.SearchPaths);
                 ThisEcnRelease.PushOpenFileStack(currentFile);
                 releaseStatus = ReleaseFile(currentFile);
+                reportLines.Add($"{currentFile.FileName} is released");
+
                 if (releaseStatus != 0)
                 {
                     goto FinishRelease;
                 }
-                ThisEcnRelease.AddCompletedFile(currentFile);
-                foreach (EcnFile ParentFile in currentFile.Parents)
+                ThisEcnRelease.AddReleasedFile(currentFile);
+                foreach (EcnFile parentFile in currentFile.Parents)
                 {
-                    if (ParentFile.DocumentType == swDocumentTypes_e.swDocDRAWING && ParentFile.LoadedFilesRemaining == 1)
+                    if (parentFile.DocumentType == swDocumentTypes_e.swDocDRAWING && parentFile.LoadedFilesRemaining == 1)
                     {
-                        releaseStatus = ReleaseFile(ParentFile);
-                        if(releaseStatus != 0)
+                        releaseStatus = ReleaseFile(parentFile);
+                        if (releaseStatus != 0)
                         {
                             goto FinishRelease;
                         }
-
-                        ThisSolidworksService.CloseFile(ParentFile.FilePath);
-                        ThisEcnRelease.AddCompletedFile(ParentFile);
+                    
+                        ThisSolidworksService.CloseFile(parentFile.FilePath);
+                        ThisEcnRelease.AddReleasedFile(parentFile);
 
                     }
                     else 
                     {
-                        ThisEcnRelease.ProcessFilesPush(ParentFile);
+                        ThisEcnRelease.ProcessFilesPush(parentFile);
                     }
-                    ParentFile.LoadedFilesRemaining--;
+                    parentFile.LoadedFilesRemaining--;
+
 
                 }
-                
+
+                foreach (EcnFile ecnFile in ThisEcnRelease.ProcessingFileQueue)
+                {
+                }
                 while (ThisEcnRelease.OpenFilesStack.Count > 0)
                 {
                     int parentsCompleted = 0;
                     EcnFile openFileCurrent = ThisEcnRelease.OpenFilesStack.Peek();
                     foreach (EcnFile parent in openFileCurrent.Parents)
                     {
-                        if (ThisEcnRelease.CompletedFiles.Contains(parent))
+                        if (ThisEcnRelease.ReleasedFiles.Contains(parent))
                         {
                             parentsCompleted++;
                         }
@@ -260,13 +291,14 @@ namespace SolidworksAddTest
                         break;
                     }
                 }
-                reportLines.Add("Validation Status: Passed");
-                ThisReleaseReport.WriteToReport(reportLines);
-                goto FinishRelease;
+      
                 
             }
+            reportLines.Add("Validation Status: Passed");
+            ThisReleaseReport.WriteToReport(reportLines);
+            goto FinishRelease;
 
-        
+
         FinishRelease:
             ThisSolidworksService.CloseAllDocuments();
             ThisReleaseReport.FinishReport();
@@ -502,7 +534,7 @@ namespace SolidworksAddTest
         private void FileTraversal(EcnFile currentFile, string filePath)
         {
             bool canClose = true;
-            if (ThisEcnRelease.CompletedFiles.Contains(currentFile))
+            if (ThisEcnRelease.ReleasedFiles.Contains(currentFile))
             {
                 return;
             }
@@ -510,7 +542,7 @@ namespace SolidworksAddTest
             {
                 return;
             }
-            ThisEcnRelease.AddCompletedFile(currentFile);
+            ThisEcnRelease.AddReleasedFile(currentFile);
             ThisSolidworksService.ApplySearchPaths(currentFile.SearchPaths);
             ReleaseFile(currentFile);
             
@@ -559,8 +591,12 @@ namespace SolidworksAddTest
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error copying folder: {ex.Message}");
+                string msg = $"Error copying folder: {ex.Message}";
+                List<string> list = new List<string>();
+                list.Add(msg);
+                ThisReleaseReport.WriteToReport(list);
             }
+        
         }
         public void ClearEcnLocalFolder(string tempFolder, bool startup)
         {
@@ -579,7 +615,10 @@ namespace SolidworksAddTest
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error clearing temp folder: {ex.Message}");
+                string msg = $"Error clearing temp folder: {ex.Message}";
+                List<string> list = new List<string>();
+                list.Add(msg);
+                ThisReleaseReport.WriteToReport(list);
             }
         }
 

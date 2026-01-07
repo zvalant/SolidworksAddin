@@ -122,5 +122,18 @@ namespace SolidworksAddTest
                 MessageBox.Show($"Error opening report: {ex.Message}");
             }
         }
+        public void WriteValidationStatus(bool validationStatus, List<string> reportLines)
+        {
+            if (validationStatus)
+            {
+                reportLines.Insert(0, ("Validation Status: Passed"));
+                reportLines.Add("");
+            }
+            else
+            {
+                reportLines.Insert(0, ("Validation Status: Failed"));
+                reportLines.Add("");
+            }
+        }
     }
 }

@@ -15,5 +15,12 @@ namespace SolidworksAddTest
             return fileName;
 
         }
+        public string GetFileExt(string docName)
+        {
+            string fileName = GetFileWithExt((string)docName);
+            string[] fileSegments = fileName.Split(new char[] { '.' });
+            return fileSegments[fileSegments.Length - 1];
+
+        }
     }
 }
