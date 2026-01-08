@@ -52,7 +52,7 @@ namespace SolidworksAddTest
         public void InitalizeRelease()
         {
             //testReleaseNumber will need to be changed to be ui input dependent along with other release options.
-            string testReleaseNumber = "52635_test";
+            string testReleaseNumber = "52635";
 
 
 
@@ -178,8 +178,6 @@ namespace SolidworksAddTest
             reportLines.Clear();
             sectionHeader = "File Release Validation";
             ThisReleaseReport.WriteSectionHeader(sectionHeader);
-            HashSet<string> allFilesCheck = new HashSet<string>();
-            Queue<EcnFile> filesQueue = new Queue<EcnFile>();
             
 
             foreach (EcnFile file in ThisEcnRelease.Files.Values)
@@ -196,31 +194,11 @@ namespace SolidworksAddTest
                 }
                 
             }
-
-            foreach (EcnFile file in ThisEcnRelease.LeafFiles)
-            {
-                ThisEcnRelease.ProcessFilesPush(file);
-                filesQueue.Enqueue(file);
-                reportLines.Add($"{file.FileName} is Leaf and added to queue");
-            }
-            while (filesQueue.Count > 0)
-            {
-                EcnFile file = filesQueue.Dequeue();
-                reportLines.Add($"{file.FileName} is added to files queue");
-                foreach (EcnFile parentFile in file.Parents)
-                {
-                    reportLines.Add($"{parentFile.FileName} is PARENT OF {file.FileName}");
-                    filesQueue.Enqueue(parentFile);
-                }
-
-
-            }
             ThisReleaseReport.WriteToReport(reportLines);
             reportLines.Clear();
             foreach (EcnFile file in ThisEcnRelease.LeafFiles)
             {
                 ThisEcnRelease.ProcessFilesPush(file);
-                reportLines.Add($"{file.FileName} is leaf");
             }
             
             while (ThisEcnRelease.ProcessingFileQueue.Count > 0)
@@ -237,7 +215,6 @@ namespace SolidworksAddTest
                 ThisSolidworksService.ApplySearchPaths(currentFile.SearchPaths);
                 ThisEcnRelease.PushOpenFileStack(currentFile);
                 releaseStatus = ReleaseFile(currentFile);
-                reportLines.Add($"{currentFile.FileName} is released");
 
                 if (releaseStatus != 0)
                 {
@@ -428,8 +405,16 @@ namespace SolidworksAddTest
             {
                 case swDocumentTypes_e.swDocPART:
                     
-                    ModelDoc2 activePart = ThisSolidworksService.OpenPart(file.FilePath);
-                     PartValidation currentPartValidation = new PartValidation(ThisSolidworksService);
+                    SolidworksServiceResult<ModelDoc2> openPartResult = ThisSolidworksService.OpenPart(file.FilePath);
+                    if (!openPartResult.Success)
+                    {
+                        reportLines.Add($" Error Opening Part {file.FilePath}");
+                        return 1;
+
+                    }
+                    ModelDoc2 activePart = openPartResult.response;
+                    
+                    PartValidation currentPartValidation = new PartValidation(ThisSolidworksService);
 
                     PartValidationResult partReleaseResult = currentPartValidation.RunPartValidation(activePart);
                     if (partReleaseResult.CriticalError)
@@ -441,6 +426,8 @@ namespace SolidworksAddTest
                     {
                         reportLines.Add($"Validation Status: Failed");
                         reportLines.Add(file.FilePath);
+                        releaseResult = 1;
+
 
                         foreach (PartFeatureInfo partInfo in partReleaseResult.TotalSketchErrors)
                         {
@@ -452,7 +439,15 @@ namespace SolidworksAddTest
                     }
                     break;
                 case swDocumentTypes_e.swDocASSEMBLY:
-                    ModelDoc2 activeAssy = ThisSolidworksService.OpenAssembly(file.FilePath);
+
+                    SolidworksServiceResult<ModelDoc2> openAssemblyResult = ThisSolidworksService.OpenAssembly(file.FilePath);
+                    if (!openAssemblyResult.Success)
+                    {
+                        reportLines.Add($"Error Opening {file.FilePath}");
+                        return 1;
+                    }
+
+                    ModelDoc2 activeAssy = openAssemblyResult.response;
                     AssemblyValidationResult assemblyReleaseResult = ThisReleaseValidationService.CheckAssembly(activeAssy);
                     if (assemblyReleaseResult.CriticalError)
                     {
@@ -464,6 +459,7 @@ namespace SolidworksAddTest
 
                     {
                         reportLines.Add($"Validation Status: Failed");
+                        reportLines.Add (file.FilePath);
                         foreach (ComponentInfo componentError in assemblyReleaseResult.TotalComponentErrors)
                         {
                             reportLines.Add($"\t-{componentError.Name}({componentError.Configuration}) - {componentError.ConstraintStatus}");
@@ -474,8 +470,14 @@ namespace SolidworksAddTest
 
                     break;
                 case swDocumentTypes_e.swDocDRAWING:
+                    bool deleteAnnotations = false;
                     docType = swDocumentTypes_e.swDocDRAWING;
-                    ModelDoc2 activeDrawing = ThisSolidworksService.OpenDrawing(file.FilePath);
+                    SolidworksServiceResult<ModelDoc2> openDrawingResult = ThisSolidworksService.OpenDrawing(file.FilePath);
+                    if (!openDrawingResult.Success)
+                    {
+                        return 1;
+                    }
+                    ModelDoc2 activeDrawing = openDrawingResult.response;
                     DrawingValidationResult drawingReleaseResult = ThisReleaseValidationService.CheckDrawing(activeDrawing, file.FilePath);
                     if (drawingReleaseResult.CriticalError)
                     {
@@ -485,6 +487,7 @@ namespace SolidworksAddTest
                     else if(drawingReleaseResult.FoundDanglingAnnotations)
                     {
                         reportLines.Add($"Validation Status: Failed");
+                        reportLines.Add(file.FilePath);
                         releaseResult = 1;
                         foreach (SheetInfo currentSheetInfo in drawingReleaseResult.TotalSheets) 
                         {
@@ -510,7 +513,7 @@ namespace SolidworksAddTest
 
                     }
                     
-                    if (drawingReleaseResult.FoundDanglingAnnotations)
+                    if (drawingReleaseResult.FoundDanglingAnnotations && deleteAnnotations)
                     {
                         ThisSolidworksService.DeleteAllSelections(activeDrawing);
                         ThisSolidworksService.MoveSWFile(file.FilePath, file.FileName, ThisEcnRelease.ReleaseFolderSrc);
@@ -531,44 +534,7 @@ namespace SolidworksAddTest
             return 0;
         }
         // this would be used for DFS traversal if used in future
-        private void FileTraversal(EcnFile currentFile, string filePath)
-        {
-            bool canClose = true;
-            if (ThisEcnRelease.ReleasedFiles.Contains(currentFile))
-            {
-                return;
-            }
-            if (currentFile.LoadedFilesRemaining > 0)
-            {
-                return;
-            }
-            ThisEcnRelease.AddReleasedFile(currentFile);
-            ThisSolidworksService.ApplySearchPaths(currentFile.SearchPaths);
-            ReleaseFile(currentFile);
-            
-            foreach (EcnFile parentFile in currentFile.Parents)
-            {
-                parentFile.LoadedFilesRemaining--;
-                if (parentFile.LoadedFilesRemaining > 0) { 
-                    canClose = false;
-                    continue;
-                }
-                FileTraversal(parentFile, parentFile.FilePath);
-                
-                
-                
-            }
-            
-            if (canClose)
-            {
-                ThisSolidworksService.CloseFile(filePath);
 
-
-            }
-            
-            //ThisSolidworksService.CloseFile(filePath);
-
-        }
         public void CopyEcnFolder(string sourceFolder, string destFolder)
         {
             try

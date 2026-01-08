@@ -4,17 +4,32 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SolidworksAddTest
 {
-    public class SolidworksServiceResponse
+    public class SolidworksServiceResult
     {
 
     }
+    public class SolidworksServiceResult<T>
+    { 
+        public bool Success { get; set; }
+        public T response { get; set; }
+        public string ErrorMessage {  get; set; }
 
+
+        public SolidworksServiceResult() 
+        {
+            Success = false;
+
+            
+
+        }
+    }
     public class SolidworksService
     {
         SldWorks SolidWorksApp { get; set; }
@@ -48,58 +63,68 @@ namespace SolidworksAddTest
             ReleaseAnnotations[(int)swAnnotationType_e.swLeader] = "General Leader";
             ReleaseAnnotations[(int)swAnnotationType_e.swCustomSymbol] = "Custom Symbol";
 
-            SubFeatureTypeExceptions = new HashSet<string>();
+            SubFeatureTypeExceptions = new HashSet<string> {
+            "FlatPattern",
+            "RefPlane",
+            "RefAxis"};
 
-            SubFeatureTypeExceptions.Add("FlatPattern");
-            SubFeatureTypeExceptions.Add("RefPlane");
-            SubFeatureTypeExceptions.Add("RefAxis");
+            FeatureTypeExceptions = new HashSet<string> {
+            "ProfileFeature",
+            "MirrorStock"};
 
-
-
-            FeatureTypeExceptions = new HashSet<string>();
-            FeatureTypeExceptions.Add("ProfileFeature");
-            FeatureTypeExceptions.Add("MirrorStock");
         }
-        public ModelDoc2 OpenAssembly(string filepath)
+        public SolidworksServiceResult<ModelDoc2> OpenAssembly(string filepath)
         {
+            SolidworksServiceResult<ModelDoc2> openAssemblyResult = new SolidworksServiceResult<ModelDoc2>();
+            SolidworksServiceResult<ModelDoc2> openFileResult = new SolidworksServiceResult<ModelDoc2>();
+
             try
             {
                 int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent | (int)swOpenDocOptions_e.swOpenDocOptions_LoadModel;
 
                 if (SolidWorksApp == null)
                 {
-                    MessageBox.Show("Parent add-in is not set.");
-                    return null;
+                    openAssemblyResult.ErrorMessage = "Parent add-in is not set.";
+                    return openAssemblyResult;
+
                 }
 
 
                 // Check if file exists
                 if (!System.IO.File.Exists(filepath))
                 {
-                    MessageBox.Show($"File not found: {filepath}");
-                    return null;
+                    openAssemblyResult.ErrorMessage = $"File not Found: {filepath}";
+                    return openAssemblyResult;
                 }
 
                 // Define document type and options
                 int docType = (int)swDocumentTypes_e.swDocASSEMBLY;
 
                 // Open the document
-                ModelDoc2 doc = OpenFile(filepath, docType, options);
 
+                openFileResult = OpenFile(filepath, docType, options);
+                if (openFileResult.Success)
+                {
+                    ModelDoc2 doc = openFileResult.response;
+                    openAssemblyResult.Success = true;
+                    ModelDocExtension swDocExt = doc.Extension;
+                    openAssemblyResult.response = doc;
 
-                ModelDocExtension swDocExt = doc.Extension;
+                }
 
-                return doc;
+                return openAssemblyResult;
 
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Exception opening assembly: {ex.Message}");
-                return null;
+                string errorMsg = ($"Error opening assembly: {ex.Message}");
+                openAssemblyResult.ErrorMessage = errorMsg;
+                return openAssemblyResult;
             }
         }
-        public ModelDoc2 OpenFile(string filepath, int docType, int options)
+        public SolidworksServiceResult<ModelDoc2> OpenFile(string filepath, int docType, int options)
         {
+            SolidworksServiceResult<ModelDoc2> OpenFileResult = new SolidworksServiceResult<ModelDoc2>();
             int configuration = 0;
             string configName = "";
             int errors = 0;
@@ -114,21 +139,25 @@ namespace SolidworksAddTest
                 );
             if (doc != null)
             {
-
-                // Optional: Get some basic info about the assembly
+                OpenFileResult.response = doc;
+                OpenFileResult.Success = true;
+                // Optional: Get about the assembly
                 string title = doc.GetTitle();
                 string pathName = doc.GetPathName();
 
             }
             else
             {
-                string errorMsg = GetOpenDocumentError(errors);
-                MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
+
+                string SWErrorMsg = GetOpenDocumentError(errors);
+                string errorMessage = ($"Failed to open document.\nError: {SWErrorMsg}\nWarnings: {warnings}");
+                OpenFileResult.ErrorMessage = errorMessage;
             }
-            return doc;
+            return OpenFileResult;
         }
-        public void ApplySearchPaths(List<string> searchPathPriority)
+        public SolidworksServiceResult<bool> ApplySearchPaths(List<string> searchPathPriority)
         {
+            SolidworksServiceResult<bool> applySearchPathResult = new SolidworksServiceResult<bool>();
             try
             {
 
@@ -151,32 +180,48 @@ namespace SolidworksAddTest
                 {
                     SolidWorksApp.SetSearchFolders((int)swSearchFolderTypes_e.swDocumentType, foldersString);
                 }
+            applySearchPathResult.Success = true;
+
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error managing search paths class: {ex.Message}");
             }
+            applySearchPathResult.response = applySearchPathResult.Success;
+            return applySearchPathResult;
+
         }
-        public void CloseAllDocuments()
+        public SolidworksServiceResult<bool> CloseAllDocuments()
         {
-            SolidWorksApp.CloseAllDocuments(true);
+            SolidworksServiceResult<bool> solidworksServiceResult = new SolidworksServiceResult<bool>();
+            solidworksServiceResult.Success = SolidWorksApp.CloseAllDocuments(true);
+            solidworksServiceResult.response = solidworksServiceResult.Success;
+            return solidworksServiceResult;
+
         }
-        public void CloseFile(string filepath)
+        public SolidworksServiceResult<bool> CloseFile(string filepath)
         {
+            SolidworksServiceResult<bool> closeFileResult = new SolidworksServiceResult<bool>();
+
             try
             {
                 if (SolidWorksApp == null)
                 {
                     MessageBox.Show("Parent add-in is not set.");
-                    return;
+                    closeFileResult.ErrorMessage = "Addin is not set correctly";
+                    closeFileResult.response = closeFileResult.Success;
                 }
 
                 SolidWorksApp.CloseDoc(filepath);
+                closeFileResult.Success = true;
+                closeFileResult.response = closeFileResult.Success;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error Closing SW File: {ex.Message}");
+                closeFileResult.ErrorMessage = $"Error Closing SW File: {ex.Message}";
+                closeFileResult.response= closeFileResult.Success;
             }
+            return closeFileResult;
         }
         public string[] GetDocumentDependencies(string DocName)
         {
@@ -209,22 +254,27 @@ namespace SolidworksAddTest
             }
             return suppressedMatesResult;
         }
-        public ModelDoc2 OpenPart(string filepath)
+        public SolidworksServiceResult<ModelDoc2> OpenPart(string filepath)
         {
+            SolidworksServiceResult<ModelDoc2> openPartResult = new SolidworksServiceResult<ModelDoc2>();
+            SolidworksServiceResult<ModelDoc2> openFileResult = new SolidworksServiceResult<ModelDoc2>();
             try
             {
                 if (SolidWorksApp == null)
                 {
-                    MessageBox.Show("Parent add-in is not set.");
-                     return null;
+                    string errorMessage = "Parent add-in is not set.";
+                    openPartResult.ErrorMessage = errorMessage;
+
+                     return openPartResult;
                 }
 
 
                 // Check if file exists
                 if (!System.IO.File.Exists(filepath))
                 {
-                    MessageBox.Show($"File not found: {filepath}");
-                    return null;
+                    string errorMessage = $"File not found: {filepath}";
+                    openPartResult.ErrorMessage = errorMessage;
+                    return openPartResult;
                 }
 
                 // Define document type and options
@@ -236,83 +286,75 @@ namespace SolidworksAddTest
                 int warnings = 0;
 
                 // Open the document
-                ModelDoc2 doc = OpenFile(filepath,(int)swDocumentTypes_e.swDocPART, options);
+                
+                openFileResult = OpenFile(filepath,(int)swDocumentTypes_e.swDocPART, options);
 
-                if (doc != null)
+
+                if (openFileResult.Success)
                 {
-
-                    // Optional: Get some basic info about the assembly
-                    string title = doc.GetTitle();
-                    string pathName = doc.GetPathName();
+                    openPartResult.Success = true;
+                    openPartResult.response = openFileResult.response;
+       
                 }
                 else
                 {
-                    string errorMsg = GetOpenDocumentError(errors);
-                    MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
+                    string SWerrorMsg = GetOpenDocumentError(errors);
+                    string ErrorMsg = $"Failed to open document.\nError: {SWerrorMsg}\nWarnings: {warnings}";
                 }
-                return doc;
+                return openPartResult;
 
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Exception opening assembly: {ex.Message}");
-                return null;
+
+                string ErrorMsg = $"Error opening assembly: {ex.Message}";
+                openPartResult.ErrorMessage = ErrorMsg;
+                return openPartResult;
             }
         }
-        public ModelDoc2 OpenDrawing(string filepath)
+        public SolidworksServiceResult<ModelDoc2> OpenDrawing(string filepath)
         {
+            SolidworksServiceResult<ModelDoc2> OpenDrawingResult = new SolidworksServiceResult<ModelDoc2>();
+            SolidworksServiceResult<ModelDoc2> openFileResult = new SolidworksServiceResult<ModelDoc2>();
             try
             {
+
                 if (SolidWorksApp == null)
                 {
-                    MessageBox.Show("Parent add-in is not set.");
-                    return null;
+                    string errorMessage = "Parent add-in is not set.";
+                    OpenDrawingResult.ErrorMessage = errorMessage;
+                    return OpenDrawingResult;
                 }
 
                 // Check if file exists
                 if (!System.IO.File.Exists(filepath))
                 {
-                    MessageBox.Show($"File not found: {filepath}");
-                    return null;
+                    string errorMessage = "File not found: {filepath}";
+                    OpenDrawingResult.ErrorMessage = errorMessage;
+                    return OpenDrawingResult;
                 }
                 SolidWorksApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swAutomaticDrawingViewUpdate, false);
                 // Define document type and options
 
                 int options = (int)swOpenDocOptions_e.swOpenDocOptions_Silent;
-                int configuration = 0;
-                string configName = "";
-                int errors = 0;
-                int warnings = 0;
+
 
                 // Open the document
-                ModelDoc2 doc = SolidWorksApp.OpenDoc6(
-                    filepath,
-                    (int)swDocumentTypes_e.swDocDRAWING,
-                    options,
-                    configName,
-                    ref errors,
-                    ref warnings
-                );
-
-                if (doc != null)
+                openFileResult = OpenFile(filepath, (int)swDocumentTypes_e.swDocDRAWING, options);
+                if (!openFileResult.Success)
                 {
-
-                    // Optional: Get some basic info about the assembly
-                    string title = doc.GetTitle();
-                    string pathName = doc.GetPathName();
+                    
+                    openFileResult.ErrorMessage = $"Failed to open document {openFileResult.ErrorMessage}";
+                    return openFileResult;
                 }
-                else
-                {
-                    string errorMsg = GetOpenDocumentError(errors);
-                    MessageBox.Show($"Failed to open document.\nError: {errorMsg}\nWarnings: {warnings}");
-                    return doc;
-                }
-                return doc;
+                OpenDrawingResult.Success = true;
+                OpenDrawingResult.response = openFileResult.response;
+                return OpenDrawingResult;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Exception opening assembly: {ex.Message}");
-                return null;
+                OpenDrawingResult.ErrorMessage = ($"Error while opening Drawing: {ex.Message}");
+                return OpenDrawingResult;
             }
         }
         private string GetOpenDocumentError(int errorCode)
@@ -369,6 +411,10 @@ namespace SolidworksAddTest
         }
         public string[] GetConfigurationNames(ModelDoc2 doc)
         {
+            if (doc == null)
+            {
+                MessageBox.Show("DOC is NULL FOr Configs");
+            }
             string[] configNames = doc.GetConfigurationNames();
             return configNames;
         }

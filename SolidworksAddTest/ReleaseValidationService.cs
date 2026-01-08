@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Runtime.ExceptionServices;
+using SolidWorks.Interop.swdocumentmgr;
 
 namespace SolidworksAddTest
 
@@ -68,17 +69,22 @@ namespace SolidworksAddTest
     public class SearchAndDependenciesValidationResult : ValidationResultBase
     { 
         public List<string> ValidPaths { get; set; }
+        public List<string> ArchivePaths { get;set; }
         public List<Tuple<string,string>> InvalidDependencies { get; set; }
         public bool FoundInvalidDependencies { get; set; }
         public List<string> SearchPaths { get; set; }
 
         public SearchAndDependenciesValidationResult(string releaseFolderTemp, string releaseFolderSrc)
         {
-            ValidPaths = new List<string>();
-            ValidPaths.Add("S:\\Engineering\\Archive");
-            ValidPaths.Add("M:");
-            ValidPaths.Add(releaseFolderSrc);
-            ValidPaths.Add(releaseFolderTemp);
+            ValidPaths = new List<string> { "S:\\Engineering\\Archive",
+            "M:",
+            releaseFolderSrc,
+            releaseFolderTemp,
+            };
+            ArchivePaths = new List<string> {
+                "S:\\Engineering\\Archive",
+                "M:"
+            };
             FoundInvalidDependencies = false;
             // First String in Tuple is parent file and second is dependent.  
             InvalidDependencies = new List<Tuple<string, string>>();
@@ -162,6 +168,7 @@ namespace SolidworksAddTest
         {
             Utility utilityFunctions = new Utility();
             string referenceFileName = utilityFunctions.GetFileWithExt(referenceDocPath);
+            string parentFileName = utilityFunctions.GetFileWithExt(parentDocPath);
 
             string folderKey = "";
             /*paths segments will split up path by folders and drives this works for current file architecture 
@@ -171,16 +178,23 @@ namespace SolidworksAddTest
             string fileNameWithExt = pathSegments[pathSegments.Length - 1];
             string pathWithoutFile = referenceDocPath.Substring(0, referenceDocPath.Length - fileNameWithExt.Length-1);
             bool pathValidation = false;
-
-
+            foreach (string archivePath in currentValidationResult.ArchivePaths)
+            {
+                // if parent matches an archive path allow to pass validation
+                if (archivePath == parentDocPath.Substring(0, archivePath.Length))
+                {
+                    pathValidation = true;
+                }
+            }
             foreach (string validPath in currentValidationResult.ValidPaths)
             {
+                
                 int dependentPathLen = referenceDocPath.Length;
                 if (dependentPathLen < validPath.Length)
                 {
                     continue;
                 }
-                else if (validPath == referenceDocPath.Substring(0, validPath.Length) || ThisEcnRelease.FileNames.Contains(referenceFileName) || parentDocPath.Substring(0,validPath.Length) == validPath)
+                else if (validPath == referenceDocPath.Substring(0, validPath.Length) || ThisEcnRelease.FileNames.Contains(referenceFileName))
                 {
                     pathValidation = true;
                     
@@ -234,7 +248,11 @@ namespace SolidworksAddTest
 
         public PartValidationResult RunPartValidation(ModelDoc2 doc)
         {
-         
+            if (doc == null)
+            {
+                MessageBox.Show("DOC is NULL for part validations");
+            }
+
             PartValidationResult currentPartResult = new PartValidationResult();
             PartDoc swPart = (PartDoc)doc;
             string[] configurationNames = ThisSolidworksService.GetConfigurationNames(doc);
