@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Runtime.ExceptionServices;
 using SolidWorks.Interop.swdocumentmgr;
+using System.Threading;
 
 namespace SolidworksAddTest
 
@@ -255,19 +256,25 @@ namespace SolidworksAddTest
 
             PartValidationResult currentPartResult = new PartValidationResult();
             PartDoc swPart = (PartDoc)doc;
-            string[] configurationNames = ThisSolidworksService.GetConfigurationNames(doc);
+            SolidworksServiceResult<string[]> getConfNamesResult = ThisSolidworksService.GetConfigurationNames(doc);
+            if (!getConfNamesResult.Success)
+            {
+                currentPartResult.CriticalError = true;
+                return currentPartResult;
+            }
+            string[] configurationNames = getConfNamesResult.response;
             if (swPart == null)
             {
                 currentPartResult.CriticalError = true;
                 return currentPartResult;
             }
-            foreach (string configurationName in configurationNames)
+            foreach (string currentConfigurationName in configurationNames)
             {
                 swPart = (PartDoc)doc;
-                bool configSwitch = doc.ShowConfiguration2(configurationName);
+                bool configSwitch = doc.ShowConfiguration2(currentConfigurationName);
                 Configuration activeConfiguration = doc.GetActiveConfiguration();
 
-                if (!configSwitch & activeConfiguration.Name != configurationName)
+                if (!configSwitch & activeConfiguration.Name != currentConfigurationName)
                 {
                     currentPartResult.CriticalError = true;
 
@@ -294,17 +301,22 @@ namespace SolidworksAddTest
                     currentFeature.GetSpecificFeature();
                     string currentFeatureType = currentFeature.GetTypeName2();
                     currentSubFeature = (Feature)currentFeature.GetFirstSubFeature();
-                    bool[] isFeatureSuppressed = currentFeature.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, configurationName);
+                    SolidworksServiceResult<bool[]> isFeatureSuppressedResult = ThisSolidworksService.IsFeatureSuppressed(currentFeature, currentConfigurationName);
+                    bool[] isFeatureSuppressed = isFeatureSuppressedResult.response;
                     while (currentSubFeature != null && !isFeatureSuppressed[0] && !ThisSolidworksService.FeatureTypeExceptions.Contains(currentFeatureType))
                     {
-                        if (currentSubFeature.GetSpecificFeature2() is Sketch)
+                        SolidworksServiceResult <bool> isFeatureSketchResult = ThisSolidworksService.IsFeatureSketch(currentSubFeature);
+
+                        if (isFeatureSketchResult.response)
                         {
-                            Sketch currentSubFeatureSketch = (Sketch)currentSubFeature.GetSpecificFeature2();
-                            string featureType = currentFeature.GetTypeName2();
+                            SolidworksServiceResult<Sketch> getCurrentSketchResult = ThisSolidworksService.GetSketch(currentSubFeature);
+                            Sketch currentSubFeatureSketch = getCurrentSketchResult.response;
+                            SolidworksServiceResult<string> getFeatureTypeNameResult = ThisSolidworksService.GetFeatureTypeName(currentFeature);
+                            string featureType = getFeatureTypeNameResult.response;
                             int subConstrainStatus = (int)currentSubFeatureSketch.GetConstrainedStatus();
                             if ((!ThisSolidworksService.SubFeatureTypeExceptions.Contains(featureType)) && subConstrainStatus != 3)
                             {
-                                PartFeatureInfo currentFeatureInfo = new PartFeatureInfo(currentFeature.Name, currentSubFeature.Name, configurationName);
+                                PartFeatureInfo currentFeatureInfo = new PartFeatureInfo(currentFeature.Name, currentSubFeature.Name, currentConfigurationName);
                                 currentPartResult.FoundFeatureErrors = true;
                                 currentPartResult.TotalSketchErrors.Add(currentFeatureInfo);
                             }
@@ -336,8 +348,13 @@ namespace SolidworksAddTest
         {
             AssemblyValidationResult currentAssemblyResult = new AssemblyValidationResult();
             bool isWarning = true;
-
-            string[] configurationNames = ThisSolidworksService.GetConfigurationNames(doc);
+            SolidworksServiceResult<string[]> getConfigNamesResult = ThisSolidworksService.GetConfigurationNames(doc);
+            if (!getConfigNamesResult.Success)
+            {
+                currentAssemblyResult.CriticalError = true;
+                return currentAssemblyResult;
+            }
+            string[] configurationNames = getConfigNamesResult.response;
 
             foreach (string configurationName in configurationNames)
             {
@@ -349,9 +366,8 @@ namespace SolidworksAddTest
                 Feature currentFeature = doc.FirstFeature();
                 object[] components = currentAssembly.GetComponents(true);
                 object[] Mates = null;
-                HashSet<string> suppressedMatesSet = new HashSet<string>();
-
-                suppressedMatesSet = ThisSolidworksService.getSuppressedComponentMates(doc);
+                SolidworksServiceResult<HashSet<string>> suppressedMatesResult = ThisSolidworksService.getSuppressedComponentMates(doc);
+                HashSet<string> suppressedMatesSet = suppressedMatesResult.response;
 
                 if (!configSwitch & activeConfiguration.Name != configurationName)
                 {
@@ -466,8 +482,10 @@ namespace SolidworksAddTest
       
             int totalAnnotations = 0;
             DrawingDoc swDrawingDoc = (DrawingDoc)doc;
-            object[] sheets = ThisSolidworksService.GetDrawingSheets(swDrawingDoc);
-            string[] sheetNames = ThisSolidworksService.GetDrawingSheetNames(swDrawingDoc);
+            SolidworksServiceResult<object[]> getSheetsResult = ThisSolidworksService.GetDrawingSheets(swDrawingDoc);
+            object[] sheets = getSheetsResult.response;
+            SolidworksServiceResult<string[]> getSheetNameResult = ThisSolidworksService.GetDrawingSheetNames(swDrawingDoc);
+            string[] sheetNames = getSheetNameResult.response;
 
             if (sheets == null || sheets.Length == 0)
             {
@@ -494,14 +512,19 @@ namespace SolidworksAddTest
                     string currentViewName = currentView.Name;
                     ViewInfo currentViewInfo = new ViewInfo(currentViewName);
                     currentSheetInfo.Views.Add(currentViewInfo);
-                    int annotationsCount = ThisSolidworksService.GetAnnotationCount(currentView);
-                    object[] viewAnnotations = ThisSolidworksService.GetAnnotations(currentView);
+                    SolidworksServiceResult<int> getAnnotiationCountResult = ThisSolidworksService.GetAnnotationCount(currentView);
+                    int annotationsCount = getAnnotiationCountResult.response;
+                    SolidworksServiceResult<object[]> getViewAnnotationsResult = ThisSolidworksService.GetAnnotations(currentView);
+
+                    object[] viewAnnotations = getViewAnnotationsResult.response;
                     if (viewAnnotations == null) continue;
                     foreach (object annotation in viewAnnotations)
                     {
                         if (annotation == null) continue;
                         Annotation currentAnnotation = (Annotation)annotation;
-                        if (!ThisSolidworksService.isAnnotationDangling(currentAnnotation)) continue;
+                        SolidworksServiceResult<bool> isAnnotationDanglingResult = ThisSolidworksService.isAnnotationDangling(currentAnnotation);
+
+                        if (!isAnnotationDanglingResult.response) continue;
 
                         if (DanglingValidation(currentAnnotation, swSelmgr, swSelData,
                             currentSheetName, currentViewName)) continue;
@@ -511,7 +534,8 @@ namespace SolidworksAddTest
                             currentDrawingResult.FoundDanglingAnnotations = true;
                             currentViewInfo.FoundDanglingAnnotations = true;
                             currentSheetInfo.FoundDanglingAnnotations = true;
-                            ThisSolidworksService.SelectAnnotation(currentAnnotation, swSelData);
+                            SolidworksServiceResult<bool> selectAnnotationResult = ThisSolidworksService.SelectAnnotation(currentAnnotation, swSelData);
+                            if (!selectAnnotationResult.response) continue;
                             string currentAnnotationType = ThisSolidworksService.GetAnnotationType(currentAnnotation);
                             if (currentViewInfo.AnnotationCount.ContainsKey(currentAnnotationType))
                             {

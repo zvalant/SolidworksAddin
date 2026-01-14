@@ -11,10 +11,7 @@ using System.Windows.Forms;
 
 namespace SolidworksAddTest
 {
-    public class SolidworksServiceResult
-    {
 
-    }
     public class SolidworksServiceResult<T>
     { 
         public bool Success { get; set; }
@@ -25,8 +22,6 @@ namespace SolidworksAddTest
         public SolidworksServiceResult() 
         {
             Success = false;
-
-            
 
         }
     }
@@ -113,7 +108,7 @@ namespace SolidworksAddTest
                 }
 
                 return openAssemblyResult;
-
+                
             }
             catch (Exception ex)
             {
@@ -185,7 +180,7 @@ namespace SolidworksAddTest
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error managing search paths class: {ex.Message}");
+                MessageBox.Show($"Error Applying search paths: {ex.Message}");
             }
             applySearchPathResult.response = applySearchPathResult.Success;
             return applySearchPathResult;
@@ -214,23 +209,33 @@ namespace SolidworksAddTest
 
                 SolidWorksApp.CloseDoc(filepath);
                 closeFileResult.Success = true;
-                closeFileResult.response = closeFileResult.Success;
             }
             catch (Exception ex)
             {
                 closeFileResult.ErrorMessage = $"Error Closing SW File: {ex.Message}";
-                closeFileResult.response= closeFileResult.Success;
             }
+            closeFileResult.response = closeFileResult.Success;
+
             return closeFileResult;
         }
-        public string[] GetDocumentDependencies(string DocName)
+        public SolidworksServiceResult<string[]> GetDocumentDependencies(string DocName)
         {
-            
-           string[] DepList = SolidWorksApp.GetDocumentDependencies2(DocName, false, false, false);
-            return DepList;
+            SolidworksServiceResult<string[]> getDependenciesResult = new SolidworksServiceResult<string[]>();
+            try
+            {
+                string[] DepList = SolidWorksApp.GetDocumentDependencies2(DocName, false, false, false);
+                getDependenciesResult.Success = true;
+                getDependenciesResult.response = DepList;
+            }
+            catch (Exception ex)
+            {
+                getDependenciesResult.ErrorMessage = $"Error generating Dependencies {ex}";
+            }
+            return getDependenciesResult;
         }
-        public HashSet<string> getSuppressedComponentMates(ModelDoc2 doc)
+        public SolidworksServiceResult<HashSet<string>> getSuppressedComponentMates(ModelDoc2 doc)
         {
+            SolidworksServiceResult<HashSet<string>> suppressedMateResult = new SolidworksServiceResult<HashSet<string>>(); 
             AssemblyDoc currentAssembly = (AssemblyDoc)doc;
             object[] Mates = null;
             HashSet<string> suppressedMatesResult = new HashSet<string>();
@@ -252,7 +257,8 @@ namespace SolidworksAddTest
 
                 }
             }
-            return suppressedMatesResult;
+            suppressedMateResult.response = suppressedMatesResult;
+            return suppressedMateResult;
         }
         public SolidworksServiceResult<ModelDoc2> OpenPart(string filepath)
         {
@@ -357,39 +363,62 @@ namespace SolidworksAddTest
                 return OpenDrawingResult;
             }
         }
+
         private string GetOpenDocumentError(int errorCode)
         {
             swFileLoadError_e error = (swFileLoadError_e)errorCode;
             return error.ToString();
         }
-        public object[] GetDrawingSheets(DrawingDoc doc)
+        public SolidworksServiceResult<object[]> GetDrawingSheets(DrawingDoc doc)
         {
+            SolidworksServiceResult<object[]> getDrawingSheetsResult = new SolidworksServiceResult<object[]>();
+
             object[] sheets = doc.GetViews();
-            return sheets;
+
+            getDrawingSheetsResult.response = sheets;
+            getDrawingSheetsResult.Success = true;
+            return getDrawingSheetsResult;
 
         }
-        public string[] GetDrawingSheetNames(DrawingDoc doc)
+        public SolidworksServiceResult<string[]> GetDrawingSheetNames(DrawingDoc doc)
         {
+            SolidworksServiceResult<string[]> getDrawingSheetNamesResult = new SolidworksServiceResult<string[]>();
+
             string[] SheetNames = doc.GetSheetNames();
-            return SheetNames;
+            getDrawingSheetNamesResult.Success = true;
+            getDrawingSheetNamesResult.response = SheetNames;
+            return getDrawingSheetNamesResult;
         }
 
-        public int GetAnnotationCount(SolidWorks.Interop.sldworks.View view)
+        public SolidworksServiceResult<int> GetAnnotationCount(SolidWorks.Interop.sldworks.View view)
         {
-            return view.GetAnnotationCount();
+            SolidworksServiceResult<int> getAnnotationCountResult = new SolidworksServiceResult<int>();
+            getAnnotationCountResult.response = view.GetAnnotationCount();
+            getAnnotationCountResult.Success = true;
+            return getAnnotationCountResult;
         }
-        public object[] GetAnnotations(SolidWorks.Interop.sldworks.View view)
+        public SolidworksServiceResult<object[]> GetAnnotations(SolidWorks.Interop.sldworks.View view)
         {
-            return view.GetAnnotations();
+            SolidworksServiceResult<object[]> getAnnotationResult = new SolidworksServiceResult<object[]>();
+            getAnnotationResult.response = view.GetAnnotations();
+            getAnnotationResult.Success = true;
+            return getAnnotationResult;
         }
-        public bool isAnnotationDangling(Annotation annotation)
+        public SolidworksServiceResult<bool> isAnnotationDangling(Annotation annotation)
         {
-            return annotation.IsDangling();
+            SolidworksServiceResult<bool> isAnnotationDanglingResult = new SolidworksServiceResult<bool>();
+            isAnnotationDanglingResult.response = annotation.IsDangling();
+            isAnnotationDanglingResult.Success = true;
+            return isAnnotationDanglingResult;
         }
-        public void SelectAnnotation(Annotation annotation, SelectData swSelData)
+        public SolidworksServiceResult<bool> SelectAnnotation(Annotation annotation, SelectData swSelData)
         {
+            SolidworksServiceResult<bool> selectAnnotationResult = new SolidworksServiceResult<bool>();
 
-            annotation.Select3(true, swSelData);
+
+            selectAnnotationResult.response = annotation.Select3(true, swSelData);
+            selectAnnotationResult.Success = true;
+            return selectAnnotationResult;
 
         }
         public void DeleteAllSelections(ModelDoc2 doc)
@@ -409,14 +438,17 @@ namespace SolidworksAddTest
                 return "Unidentified Release Annotation Found";
             }
         }
-        public string[] GetConfigurationNames(ModelDoc2 doc)
+        public SolidworksServiceResult<string[]> GetConfigurationNames(ModelDoc2 doc)
         {
+            SolidworksServiceResult<string[]> getConfigNamesResult = new SolidworksServiceResult<string[]>();
             if (doc == null)
             {
-                MessageBox.Show("DOC is NULL FOr Configs");
+                getConfigNamesResult.ErrorMessage = "DOC is NULL FOr Configs";
+                return getConfigNamesResult;
             }
-            string[] configNames = doc.GetConfigurationNames();
-            return configNames;
+            getConfigNamesResult.Success = true;    
+            getConfigNamesResult.response = doc.GetConfigurationNames();
+            return getConfigNamesResult;
         }
         public bool SaveSWDocument(ModelDoc2 doc)
         {
@@ -436,6 +468,47 @@ namespace SolidworksAddTest
                 return 1;
             }
             return 0;
+        }
+        public SolidworksServiceResult<bool[]> IsFeatureSuppressed(Feature currentFeature, string configurationName)
+        {
+            SolidworksServiceResult<bool[]> isFeaureSuppressedResult = new SolidworksServiceResult<bool[]>();
+            isFeaureSuppressedResult.response = currentFeature.IsSuppressed2((int)swInConfigurationOpts_e.swThisConfiguration, configurationName);
+            isFeaureSuppressedResult.Success = true;
+            return isFeaureSuppressedResult;
+        }
+
+        public SolidworksServiceResult<bool> IsFeatureSketch(Feature currentFeature)
+        {
+            SolidworksServiceResult<bool> getSpecificFeatureResult = new SolidworksServiceResult<bool>();
+            if (currentFeature.GetSpecificFeature2() is Sketch)
+            {
+                getSpecificFeatureResult.response = true;
+            }
+            getSpecificFeatureResult.Success = true;
+            return getSpecificFeatureResult;
+        }
+        public SolidworksServiceResult<Sketch> GetSketch(Feature currentFeature)
+        {
+            SolidworksServiceResult<Sketch> getSketchResult = new SolidworksServiceResult<Sketch>();
+            try
+            {
+                getSketchResult.response = (Sketch)currentFeature.GetSpecificFeature2();
+                getSketchResult.Success = true;
+
+            }
+            catch (Exception ex)
+            {
+                getSketchResult.ErrorMessage = ex.Message;
+            }
+            return getSketchResult;
+        }
+        public SolidworksServiceResult<string> GetFeatureTypeName(Feature currentFeature)
+        {
+            SolidworksServiceResult<string> getFeatureTypeNameResult = new SolidworksServiceResult<string>();
+            getFeatureTypeNameResult.response = currentFeature.GetTypeName2();
+            getFeatureTypeNameResult.Success = true;
+            return getFeatureTypeNameResult;
+            
         }
     }
 }

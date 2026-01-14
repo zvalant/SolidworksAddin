@@ -212,7 +212,13 @@ namespace SolidworksAddTest
                 {
                     continue;
                 }
-                ThisSolidworksService.ApplySearchPaths(currentFile.SearchPaths);
+                
+                SolidworksServiceResult<bool> searchPathsResult = ThisSolidworksService.ApplySearchPaths(currentFile.SearchPaths);
+                if (!searchPathsResult.Success)
+                {
+                    reportLines.Add($"Error applying search paths for {currentFile.FilePath}");
+                    goto FinishRelease;
+                }
                 ThisEcnRelease.PushOpenFileStack(currentFile);
                 releaseStatus = ReleaseFile(currentFile);
 
@@ -230,8 +236,8 @@ namespace SolidworksAddTest
                         {
                             goto FinishRelease;
                         }
-                    
-                        ThisSolidworksService.CloseFile(parentFile.FilePath);
+                        
+                        SolidworksServiceResult<bool> closeFileResult = ThisSolidworksService.CloseFile(parentFile.FilePath);
                         ThisEcnRelease.AddReleasedFile(parentFile);
 
                     }
@@ -261,7 +267,9 @@ namespace SolidworksAddTest
                     if (parentsCompleted >= openFileCurrent.Parents.Count)
                     {
                         ThisEcnRelease.OpenFilesStack.Pop();
-                        ThisSolidworksService.CloseFile(openFileCurrent.FilePath);
+
+                        SolidworksServiceResult<bool> closeFileResult = ThisSolidworksService.CloseFile(openFileCurrent.FilePath);
+
                     }
                     else 
                     {
@@ -358,7 +366,15 @@ namespace SolidworksAddTest
                 SearchAndDependenciesValidation currentValidation = new SearchAndDependenciesValidation(ThisSolidworksService);
                 HashSet<Tuple<string, string>> wrongExtRef = new HashSet<Tuple<string,string>>();
                 List<string> reportLines = new List<string>();
-                string[] DepList = ThisSolidworksService.GetDocumentDependencies(docName);
+
+                SolidworksServiceResult<string[]> getDependenciesResult = ThisSolidworksService.GetDocumentDependencies(docName);
+                if (!getDependenciesResult.Success)
+                {
+                    reportLines.Add(getDependenciesResult.ErrorMessage);
+                    ThisReleaseReport.WriteToReport(reportLines);
+                    
+                }
+                string[] DepList = getDependenciesResult.response;
                 if (DepList == null)
                 { 
                     return;
