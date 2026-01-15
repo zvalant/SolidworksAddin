@@ -100,7 +100,7 @@ namespace SolidworksAddTest
             using (var rk = Microsoft.Win32.Registry.LocalMachine.CreateSubKey(keyPath))
             {
                 rk.SetValue(null, t);
-                rk.SetValue("Title", "My SW Addin");
+                rk.SetValue("Title", "SW Release");
                 rk.SetValue("Description", "All your pixels are mine");
             }
 

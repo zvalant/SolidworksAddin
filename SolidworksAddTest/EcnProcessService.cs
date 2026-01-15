@@ -49,17 +49,15 @@ namespace SolidworksAddTest
             InitializeComponent();
             this.BackColor = Color.White;
             }
-        public void InitalizeRelease()
+        public void InitalizeRelease(string ecnReleaseNumber)
         {
-            //testReleaseNumber will need to be changed to be ui input dependent along with other release options.
-            string testReleaseNumber = "52635";
 
 
 
             int releaseMode = 0;
             ThisSolidworksService = new SolidworksService(parentAddin.SolidWorksApplication);
-            ThisEcnRelease = new EcnRelease(testReleaseNumber, releaseMode);
-            ThisReleaseReport = new ReleaseReport(testReleaseNumber, releaseMode);
+            ThisEcnRelease = new EcnRelease(ecnReleaseNumber, releaseMode);
+            ThisReleaseReport = new ReleaseReport(ecnReleaseNumber, releaseMode);
             ThisReleaseValidationService = new ReleaseValidationService(ThisSolidworksService);
             ThisUtility = new Utility();
         }
@@ -72,23 +70,28 @@ namespace SolidworksAddTest
 
         private void GenerateButton_Click(object sender, EventArgs e)
         {
+
+            string ecnNumber = textBox1.Text.Trim();
             DateTime startTime = DateTime.Now;
-            int release = RunRelease();
+            int release = RunRelease(ecnNumber);
             DateTime endTime = DateTime.Now;
             int runtime = (int)(endTime - startTime).TotalMilliseconds;
 
         }
-        private int RunRelease() 
+        private int RunRelease(string ecnNumber) 
         {
             //var thisRelease = new EcnRelease("50001", 0);
             //modify ecn location after inital test
-            InitalizeRelease();
-
+            InitalizeRelease(ecnNumber);
+            string folderPath = ThisEcnRelease.ReleaseFolderTemp;
             var testReleaseList = new List<string>();
             ClearEcnLocalFolder(ThisEcnRelease.ReleaseFolderTemp, true);
-            CopyEcnFolder(ThisEcnRelease.ReleaseFolderSrc, ThisEcnRelease.ReleaseFolderTemp);
-
-            string folderPath = ThisEcnRelease.ReleaseFolderTemp;
+            bool canCopyFolderOver = CopyEcnFolder(ThisEcnRelease.ReleaseFolderSrc, ThisEcnRelease.ReleaseFolderTemp);
+            if (!canCopyFolderOver)
+            {
+                MessageBox.Show($"Cant Find Folder {ThisEcnRelease.ReleaseFolderSrc}");
+                goto FinishRelease;
+            }
             
             //prevent active open files from being included
             foreach (string file in Directory.GetFiles(folderPath))
@@ -551,14 +554,14 @@ namespace SolidworksAddTest
         }
         // this would be used for DFS traversal if used in future
 
-        public void CopyEcnFolder(string sourceFolder, string destFolder)
+        public bool  CopyEcnFolder(string sourceFolder, string destFolder)
         {
             try
             {
                 if (!Directory.Exists(sourceFolder))
                 {
                     MessageBox.Show($"Source folder does not exist {sourceFolder}");
-                    return;
+                    return false;
                 }
 
                 Directory.CreateDirectory(destFolder);
@@ -577,8 +580,9 @@ namespace SolidworksAddTest
                 List<string> list = new List<string>();
                 list.Add(msg);
                 ThisReleaseReport.WriteToReport(list);
+                return false;
             }
-        
+            return true;
         }
         public void ClearEcnLocalFolder(string tempFolder, bool startup)
         {
@@ -604,9 +608,10 @@ namespace SolidworksAddTest
             }
         }
 
+        private void label1_Click(object sender, EventArgs e)
+        {
 
-
-
+        }
     }
 }
 
