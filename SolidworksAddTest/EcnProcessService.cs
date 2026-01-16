@@ -9,6 +9,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -26,12 +27,9 @@ namespace SolidworksAddTest
     [Guid("4099c769-bd7d-49a6-ac97-1ec1e38ddcf9")]
     [ProgId("SolidworksAddTest.EcnProcessService")]
 
-
-
-    
         public partial class EcnProcessService : UserControl
         {
-            private SWTestRP parentAddin;
+        private SWTestRP parentAddin;
         public SolidworksService ThisSolidworksService { get; set; }
         public ReleaseValidationService ThisReleaseValidationService { get; set; }
         private PartValidation ThisPartValidation {  get; set; }
@@ -51,8 +49,6 @@ namespace SolidworksAddTest
             }
         public void InitalizeRelease(string ecnReleaseNumber)
         {
-
-
 
             int releaseMode = 0;
             ThisSolidworksService = new SolidworksService(parentAddin.SolidWorksApplication);
@@ -78,10 +74,10 @@ namespace SolidworksAddTest
             int runtime = (int)(endTime - startTime).TotalMilliseconds;
 
         }
+
         private int RunRelease(string ecnNumber) 
         {
-            //var thisRelease = new EcnRelease("50001", 0);
-            //modify ecn location after inital test
+
             InitalizeRelease(ecnNumber);
             string folderPath = ThisEcnRelease.ReleaseFolderTemp;
             var testReleaseList = new List<string>();
@@ -89,15 +85,23 @@ namespace SolidworksAddTest
             bool canCopyFolderOver = CopyEcnFolder(ThisEcnRelease.ReleaseFolderSrc, ThisEcnRelease.ReleaseFolderTemp);
             if (!canCopyFolderOver)
             {
-                MessageBox.Show($"Cant Find Folder {ThisEcnRelease.ReleaseFolderSrc}");
-                goto FinishRelease;
+                ThisReleaseReport.WriteToReportSingleline($"Cant Find Folder {ThisEcnRelease.ReleaseFolderSrc}");
+                FinishRelease(folderPath);
+                return 1;
             }
-            
+            // check ecn txt file and run comparative check to make sure appropriate files are in folder
+
+            ParseECNFile(ThisEcnRelease);
+
+
+            //closes all open sw docs to prevent any issues during release process
+            ThisSolidworksService.CloseAllDocuments();
             //prevent active open files from being included
             foreach (string file in Directory.GetFiles(folderPath))
             {
                 string fileName = ThisUtility.GetFileWithExt(file);
                 string fileExtension = ThisUtility.GetFileExt(file);
+                // will only add files if it contains an extension and is not an actively opened file
                 if (fileName[0] != '~' && ThisEcnRelease.validReleaseExtensions.Contains(fileExtension)) 
                 {
                     testReleaseList.Add(file);
@@ -131,9 +135,8 @@ namespace SolidworksAddTest
                         break;
                 }
 
-                //SetSearchPaths(currentFile);
-               //ReleaseFile(currentFileObj);
             }
+
             List<string> reportLines = new List<string>();
             int invalidReferences = 0;
             string sectionHeader = "Reference Validation";
@@ -166,11 +169,12 @@ namespace SolidworksAddTest
 
 
             ThisReleaseReport.WriteValidationStatus(validationStatus, reportLines);
-            ThisReleaseReport.WriteToReport(reportLines);
+            ThisReleaseReport.WriteToReportMultiline(reportLines);
             reportLines.Clear();
             if (!validationStatus)
             {
-                goto FinishRelease;
+                FinishRelease(folderPath);
+                return 1;
             }
 
             //clear report lines since reference section is now complete
@@ -197,7 +201,7 @@ namespace SolidworksAddTest
                 }
                 
             }
-            ThisReleaseReport.WriteToReport(reportLines);
+            ThisReleaseReport.WriteToReportMultiline(reportLines);
             reportLines.Clear();
             foreach (EcnFile file in ThisEcnRelease.LeafFiles)
             {
@@ -220,14 +224,15 @@ namespace SolidworksAddTest
                 if (!searchPathsResult.Success)
                 {
                     reportLines.Add($"Error applying search paths for {currentFile.FilePath}");
-                    goto FinishRelease;
+                    FinishRelease(folderPath);
                 }
                 ThisEcnRelease.PushOpenFileStack(currentFile);
                 releaseStatus = ReleaseFile(currentFile);
 
                 if (releaseStatus != 0)
                 {
-                    goto FinishRelease;
+                    FinishRelease(folderPath);
+                    return 1;
                 }
                 ThisEcnRelease.AddReleasedFile(currentFile);
                 foreach (EcnFile parentFile in currentFile.Parents)
@@ -237,7 +242,8 @@ namespace SolidworksAddTest
                         releaseStatus = ReleaseFile(parentFile);
                         if (releaseStatus != 0)
                         {
-                            goto FinishRelease;
+                            FinishRelease(folderPath);
+                            return 1;
                         }
                         
                         SolidworksServiceResult<bool> closeFileResult = ThisSolidworksService.CloseFile(parentFile.FilePath);
@@ -283,16 +289,12 @@ namespace SolidworksAddTest
                 
             }
             reportLines.Add("Validation Status: Passed");
-            ThisReleaseReport.WriteToReport(reportLines);
-            goto FinishRelease;
+            ThisReleaseReport.WriteToReportMultiline(reportLines);
+            FinishRelease(folderPath);
 
 
-        FinishRelease:
-            ThisSolidworksService.CloseAllDocuments();
-            ThisReleaseReport.FinishReport();
-            ThisReleaseReport.OpenReport();
-            ClearEcnLocalFolder(folderPath, false);
-            
+
+
             /*
             foreach (EcnFile file in ThisEcnRelease.LeafFiles)
             {
@@ -300,6 +302,13 @@ namespace SolidworksAddTest
             }
             */
             return 0;
+        }
+        private void FinishRelease(string folderPath)
+        {
+            ThisSolidworksService.CloseAllDocuments();
+            ThisReleaseReport.FinishReport();
+            ThisReleaseReport.OpenReport();
+            ClearEcnLocalFolder(folderPath, false);
         }
 
         private SearchAndDependenciesValidationResult SearchPathAndGraphGeneration(string filepath, EcnRelease thisRelease, EcnFile currentFile)
@@ -374,7 +383,7 @@ namespace SolidworksAddTest
                 if (!getDependenciesResult.Success)
                 {
                     reportLines.Add(getDependenciesResult.ErrorMessage);
-                    ThisReleaseReport.WriteToReport(reportLines);
+                    ThisReleaseReport.WriteToReportMultiline(reportLines);
                     
                 }
                 string[] DepList = getDependenciesResult.response;
@@ -547,7 +556,7 @@ namespace SolidworksAddTest
             //ThisSolidworksService.CloseFile(file.FilePath);
             if (releaseResult != 0)
             {
-                ThisReleaseReport.WriteToReport(reportLines);
+                ThisReleaseReport.WriteToReportMultiline(reportLines);
                 return 1;
             }
             return 0;
@@ -579,7 +588,7 @@ namespace SolidworksAddTest
                 string msg = $"Error copying folder: {ex.Message}";
                 List<string> list = new List<string>();
                 list.Add(msg);
-                ThisReleaseReport.WriteToReport(list);
+                ThisReleaseReport.WriteToReportMultiline(list);
                 return false;
             }
             return true;
@@ -604,7 +613,40 @@ namespace SolidworksAddTest
                 string msg = $"Error clearing temp folder: {ex.Message}";
                 List<string> list = new List<string>();
                 list.Add(msg);
-                ThisReleaseReport.WriteToReport(list);
+                ThisReleaseReport.WriteToReportMultiline(list);
+            }
+        }
+        public void ParseECNFile(EcnRelease thisRelease)
+        {
+            string ecnTextFile = thisRelease.ReleaseTxtFile;
+            try
+            {
+                int txtFileIndex = 0;
+                // Read lines from the file one by one as you loop
+                foreach (string line in File.ReadLines(ecnTextFile))
+                {
+                    //current format of txt file has empty first line
+                    if (txtFileIndex == 0)
+                    {
+                        continue;
+                    }
+
+                    // Process each line here
+                    Console.WriteLine(line);
+                    string[] parsedLine = line.Split(new char[] { ' ' });
+                    string fileName = parsedLine[0];
+
+                    MessageBox.Show($"{line} fileName: {fileName}");
+
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine($"Error: The file '{ecnTextFile}' was not found.");
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine($"Error reading the file: {e.Message}");
             }
         }
 

@@ -555,8 +555,6 @@ namespace SolidworksAddTest
                 }
                 
                 sheetIdx++;
-
-
             }
             if (deleteAnnotations)
             {
@@ -584,13 +582,11 @@ namespace SolidworksAddTest
                 {
                     validAnnotationCheck = false;
                 }
-
             }
             else
             {
                 validAnnotationCheck = true;
             }
-            
             return validAnnotationCheck;
         }
 

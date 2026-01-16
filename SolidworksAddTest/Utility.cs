@@ -15,6 +15,12 @@ namespace SolidworksAddTest
             return fileName;
 
         }
+        public string GetFileNameWithoutExt(string docName)
+        {
+            string[] path = docName.Split(new char[] {'.'});
+            string fileName = path[0];
+            return fileName;
+        }
         public string GetFileExt(string docName)
         {
             string fileName = GetFileWithExt((string)docName);

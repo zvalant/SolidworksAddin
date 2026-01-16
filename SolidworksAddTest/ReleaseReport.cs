@@ -67,7 +67,7 @@ namespace SolidworksAddTest
                 reportLines.Add("=".PadRight(60, '='));
                 reportLines.Add($"{sectionName}");
                 reportLines.Add("");
-                WriteToReport(reportLines);
+                WriteToReportMultiline(reportLines);
                 
             }
             catch (Exception ex)
@@ -86,14 +86,14 @@ namespace SolidworksAddTest
             FinalRuntime.Add("");
             FinalRuntime.Add("");
             FinalRuntime.Add(runtimeString);
-            WriteToReport(FinalRuntime);
+            WriteToReportMultiline(FinalRuntime);
         }
 
         public void AddFile(EcnFile file)
         {
             Files[file] = new List<string>();
         }
-        public void WriteToReport(List<string> lines)
+        public void WriteToReportMultiline(List<string> lines)
         {
             try
             {
@@ -104,7 +104,20 @@ namespace SolidworksAddTest
                 MessageBox.Show($"Error writing to report: {ex.Message}");
             }
         }
-        public void OpenReport()
+        public void WriteToReportSingleline(string line)
+        { 
+            List<string> lines = new List<string>();
+            lines.Add(line);
+            try
+            {
+                System.IO.File.AppendAllLines(reportFilePath, lines);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error writing to report: {ex.Message}");
+            }
+        }
+public void OpenReport()
         {
             try
             {
