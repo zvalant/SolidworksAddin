@@ -11,6 +11,7 @@ namespace SolidworksAddTest
     {
         public string FileName { get; set; }
         public string FilePath { get; set; }
+        public string FilePathSrc { get; set; } 
         public int LoadedFilesRemaining { get; set; }
         public List<string> SearchPaths { get; set; }
         public HashSet<EcnFile> Parents { get; set; }

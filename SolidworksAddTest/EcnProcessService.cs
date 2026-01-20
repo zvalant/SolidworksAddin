@@ -116,8 +116,10 @@ namespace SolidworksAddTest
             {
                 string currentFile = testReleaseList[i];
                 var currentFileObj = new EcnFile();
-                currentFileObj.FilePath = testReleaseList[i];
                 currentFileObj.FileName = ThisUtility.GetFileWithExt(currentFile);
+                currentFileObj.FilePath = testReleaseList[i];
+                currentFileObj.FilePathSrc = ThisEcnRelease.ReleaseFolderSrc + "\\" + currentFileObj.FileName;
+                MessageBox.Show($"{currentFileObj.FilePathSrc}");
                 ThisEcnRelease.FileNames.Add(currentFileObj.FileName);
                 ThisEcnRelease.AddFile(currentFileObj, currentFileObj.FileName);
                 switch (Path.GetExtension(currentFile))
@@ -155,7 +157,17 @@ namespace SolidworksAddTest
                     foreach (Tuple<string,string> referencePair in DependenciesValidation.InvalidDependencies)
                     {
                         string parentFile = referencePair.Item1;
+                        string parentFileName = ThisUtility.GetFileWithExt(parentFile);
                         string referenceFile = referencePair.Item2;
+                        string referenceFileName = ThisUtility.GetFileExt(referenceFile);
+                        if (ThisEcnRelease.Files.ContainsKey(referenceFileName))
+                        {
+                            referenceFile = ThisEcnRelease.Files[referenceFileName].FilePathSrc;
+                        }
+                        if (ThisEcnRelease.Files.ContainsKey(parentFileName))
+                        {
+                            parentFile = ThisEcnRelease.Files[parentFileName].FilePathSrc;
+                        }
                         reportLines.Add($"{referenceFile} is wrong reference for {parentFile}");
                     }
                 }
