@@ -15,12 +15,12 @@ namespace SolidworksAddTest
         public DateTime runTime { get; set; }
         public DateTime startTime { get; set; }
         public Dictionary<EcnFile, List<string>> Files { get; set; }
-        public ReleaseReport(string ecnNumber, int releaseType)
+        public ReleaseReport(string ecnNumber, bool isReadiness)
         {
             reportFilePath = @"C:\Users\zacv\Documents\releaseTest";
             EcnNumber = ecnNumber;
             Files = new Dictionary<EcnFile, List<string>>();
-            if (releaseType == 0)
+            if (isReadiness)
             {
                 ReleaseType = "RELEASE";
             }

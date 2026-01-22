@@ -34,6 +34,9 @@ namespace SolidworksAddTest
         public const string PARTFILEEXT = ".SLDPRT";
         public const string ASSEMBLYFILEEXT = ".SLDASM";
         public const string DRAWINGFILEEXT = ".SLDDRW";
+        public const string EXCELFILEEXT = ".xls";
+
+
 
         public HashSet<string> SubFeatureTypeExceptions { get; set; }
         public HashSet<string> FeatureTypeExceptions { get; set; }

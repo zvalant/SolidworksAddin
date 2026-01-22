@@ -47,13 +47,14 @@ namespace SolidworksAddTest
             InitializeComponent();
             this.BackColor = Color.White;
             }
+        // Generate all required services/classes for release process
         public void InitalizeRelease(string ecnReleaseNumber)
         {
 
-            int releaseMode = 0;
+            bool isReadiness = true;
             ThisSolidworksService = new SolidworksService(parentAddin.SolidWorksApplication);
-            ThisEcnRelease = new EcnRelease(ecnReleaseNumber, releaseMode);
-            ThisReleaseReport = new ReleaseReport(ecnReleaseNumber, releaseMode);
+            ThisEcnRelease = new EcnRelease(ecnReleaseNumber, isReadiness);
+            ThisReleaseReport = new ReleaseReport(ecnReleaseNumber, isReadiness);
             ThisReleaseValidationService = new ReleaseValidationService(ThisSolidworksService);
             ThisUtility = new Utility();
         }
@@ -80,7 +81,7 @@ namespace SolidworksAddTest
 
             InitalizeRelease(ecnNumber);
             string folderPath = ThisEcnRelease.ReleaseFolderTemp;
-            var testReleaseList = new List<string>();
+            var FilesInECNFolder = new List<string>();
             ClearEcnLocalFolder(ThisEcnRelease.ReleaseFolderTemp, true);
             bool canCopyFolderOver = CopyEcnFolder(ThisEcnRelease.ReleaseFolderSrc, ThisEcnRelease.ReleaseFolderTemp);
             if (!canCopyFolderOver)
@@ -91,7 +92,12 @@ namespace SolidworksAddTest
             }
             // check ecn txt file and run comparative check to make sure appropriate files are in folder
 
-            ParseECNFile(ThisEcnRelease);
+
+            List<List<string>> EcnData = ParseECNFile(ThisEcnRelease);
+            ECNFileValidation currentEcnFileValidation = new ECNFileValidation(ThisSolidworksService);
+            EcnFileValidationResult fileValidationResult = currentEcnFileValidation.RunEcnFileValidation(EcnData, FilesInECNFolder);
+
+
 
 
             //closes all open sw docs to prevent any issues during release process
@@ -104,80 +110,96 @@ namespace SolidworksAddTest
                 // will only add files if it contains an extension and is not an actively opened file
                 if (fileName[0] != '~' && ThisEcnRelease.validReleaseExtensions.Contains(fileExtension)) 
                 {
-                    testReleaseList.Add(file);
+                    FilesInECNFolder.Add(file);
                 }
             }
+
 
 
             //NEED TO DO**provide validation that files in folder are for ecn and all files required for ecn are present
             
             //Update data models with correct files
-            for (int i = 0; i < testReleaseList.Count; i++)
+            for (int i = 0; i < FilesInECNFolder.Count; i++)
             {
-                string currentFile = testReleaseList[i];
+                string currentFile = FilesInECNFolder[i];
                 var currentFileObj = new EcnFile();
                 currentFileObj.FileName = ThisUtility.GetFileWithExt(currentFile);
-                currentFileObj.FilePath = testReleaseList[i];
+                currentFileObj.FilePath = FilesInECNFolder[i];
                 currentFileObj.FilePathSrc = ThisEcnRelease.ReleaseFolderSrc + "\\" + currentFileObj.FileName;
-                MessageBox.Show($"{currentFileObj.FilePathSrc}");
                 ThisEcnRelease.FileNames.Add(currentFileObj.FileName);
                 ThisEcnRelease.AddFile(currentFileObj, currentFileObj.FileName);
                 switch (Path.GetExtension(currentFile))
                 {
                     case SolidworksService.PARTFILEEXT:
-                        currentFileObj.DocumentType = swDocumentTypes_e.swDocPART;
+                        currentFileObj.SWDocumentType = swDocumentTypes_e.swDocPART;
                         break;
                     case SolidworksService.ASSEMBLYFILEEXT:
-                        currentFileObj.DocumentType = swDocumentTypes_e.swDocASSEMBLY;
+                        currentFileObj.SWDocumentType = swDocumentTypes_e.swDocASSEMBLY;
                         break;
                     case SolidworksService.DRAWINGFILEEXT:
-                        currentFileObj.DocumentType = swDocumentTypes_e.swDocDRAWING;
+                        currentFileObj.SWDocumentType = swDocumentTypes_e.swDocDRAWING;
                         break;
+                    case SolidworksService.EXCELFILEEXT:
+                        currentFileObj.IsExcelDocument = true;
+                        break;
+
                     default:
+                        MessageBox.Show($"{currentFile} is not Valid Release Document Type");
                         break;
                 }
 
             }
 
             List<string> reportLines = new List<string>();
+            Dictionary<string, string> wrongReferencePairs = new Dictionary<string, string>();
             int invalidReferences = 0;
             string sectionHeader = "Reference Validation";
             bool validationStatus = true;
             ThisReleaseReport.WriteSectionHeader(sectionHeader);
             foreach ( string fileName in ThisEcnRelease.Files.Keys)
-
             {
-                reportLines.Add(fileName);
                 EcnFile currentFile = ThisEcnRelease.Files[fileName];
                 SearchAndDependenciesValidationResult DependenciesValidation = SearchPathAndGraphGeneration(ThisEcnRelease.Files[fileName].FilePath, ThisEcnRelease, currentFile);
+                string srcParentFilePath;
+                string srcReferenceFilePath;
                 if (DependenciesValidation.FoundInvalidDependencies)
                 {
                     invalidReferences++;
                     validationStatus = false;
-                    foreach (Tuple<string,string> referencePair in DependenciesValidation.InvalidDependencies)
+                    foreach (string parentFilePath in DependenciesValidation.InvalidDependencies.Keys)
                     {
-                        string parentFile = referencePair.Item1;
-                        string parentFileName = ThisUtility.GetFileWithExt(parentFile);
-                        string referenceFile = referencePair.Item2;
-                        string referenceFileName = ThisUtility.GetFileExt(referenceFile);
-                        if (ThisEcnRelease.Files.ContainsKey(referenceFileName))
+                        srcParentFilePath = parentFilePath;
+                 
+                        string parentFileName = ThisUtility.GetFileWithExt(parentFilePath);
+                        foreach (string referenceFilePath in DependenciesValidation.InvalidDependencies[parentFilePath])
                         {
-                            referenceFile = ThisEcnRelease.Files[referenceFileName].FilePathSrc;
+                            srcReferenceFilePath = referenceFilePath;
+                            string referenceFileName = ThisUtility.GetFileExt(referenceFilePath);
+                            if (ThisEcnRelease.Files.ContainsKey(referenceFileName))
+                            {
+                                srcReferenceFilePath = ThisEcnRelease.Files[referenceFileName].FilePathSrc;
+                            }
+                            if (ThisEcnRelease.Files.ContainsKey(parentFileName))
+                            {
+                                srcParentFilePath = ThisEcnRelease.Files[parentFileName].FilePathSrc;
+                            }
+                            wrongReferencePairs[parentFilePath] = srcReferenceFilePath;
                         }
-                        if (ThisEcnRelease.Files.ContainsKey(parentFileName))
-                        {
-                            parentFile = ThisEcnRelease.Files[parentFileName].FilePathSrc;
-                        }
-                        reportLines.Add($"{referenceFile} is wrong reference for {parentFile}");
+            
                     }
                 }
                 currentFile.InsertSearchPaths(DependenciesValidation.SearchPaths);
-
                 ThisEcnRelease.LeafFiles.Add(currentFile);
 
-            
+
             }
-            // after adding all leafs need to 
+            foreach (string parentFilePath in wrongReferencePairs.Keys)
+            {
+                string srcReferenceFilePath = wrongReferencePairs[parentFilePath];
+                reportLines.Add($"{srcReferenceFilePath} is wrong reference for {parentFilePath}");
+
+            }
+    
 
 
             ThisReleaseReport.WriteValidationStatus(validationStatus, reportLines);
@@ -249,7 +271,7 @@ namespace SolidworksAddTest
                 ThisEcnRelease.AddReleasedFile(currentFile);
                 foreach (EcnFile parentFile in currentFile.Parents)
                 {
-                    if (parentFile.DocumentType == swDocumentTypes_e.swDocDRAWING && parentFile.LoadedFilesRemaining == 1)
+                    if (parentFile.SWDocumentType == swDocumentTypes_e.swDocDRAWING && parentFile.LoadedFilesRemaining == 1)
                     {
                         releaseStatus = ReleaseFile(parentFile);
                         if (releaseStatus != 0)
@@ -344,18 +366,7 @@ namespace SolidworksAddTest
                 
             }
             int dependenciesCount = dependencies.Count;
-            if (currentDependciesValidationResult.FoundInvalidDependencies)
-            {
-                foreach (Tuple<string,string> dependent in currentDependciesValidationResult.InvalidDependencies)
-                {
-                    string parent = dependent.Item1;
-                    string reference = dependent.Item2;
-
-                }
-                
-                    
-                
-            }
+   
             foreach (KeyValuePair<string, int> path in folderCount)
             {
                 folderPriority.Add((path.Value, path.Key));
@@ -385,13 +396,13 @@ namespace SolidworksAddTest
         //may want to split up leaves from this in future
         private void GetDependenciesAndParents(string docName, HashSet<string> dependencies, Dictionary<string, int> folderCount, EcnFile currentFile, SearchAndDependenciesValidationResult currentDependenciesValidationResult)
         {
+            List<string> reportLines = new List<string>();
+            SearchAndDependenciesValidation currentValidation = new SearchAndDependenciesValidation(ThisSolidworksService);
+            HashSet<Tuple<string, string>> wrongExtRef = new HashSet<Tuple<string, string>>();
+            SolidworksServiceResult<string[]> getDependenciesResult = ThisSolidworksService.GetDocumentDependencies(docName);
             try
             {
-                SearchAndDependenciesValidation currentValidation = new SearchAndDependenciesValidation(ThisSolidworksService);
-                HashSet<Tuple<string, string>> wrongExtRef = new HashSet<Tuple<string,string>>();
-                List<string> reportLines = new List<string>();
 
-                SolidworksServiceResult<string[]> getDependenciesResult = ThisSolidworksService.GetDocumentDependencies(docName);
                 if (!getDependenciesResult.Success)
                 {
                     reportLines.Add(getDependenciesResult.ErrorMessage);
@@ -402,6 +413,7 @@ namespace SolidworksAddTest
                 if (DepList == null)
                 { 
                     return;
+
                 }
       
                 for (int i = 0; i < DepList.Length; i += 2)
@@ -410,7 +422,6 @@ namespace SolidworksAddTest
                     string currentFileDependent = ThisUtility.GetFileWithExt(currentDependent);
                     if (!dependencies.Contains(currentDependent))
                     {
-
                         currentValidation.DependentValidation(currentDependent,docName, folderCount, currentDependenciesValidationResult, ThisEcnRelease);
                         dependencies.Add(currentDependent);
                         if (ThisEcnRelease.Files.ContainsKey(currentFileDependent))
@@ -430,8 +441,9 @@ namespace SolidworksAddTest
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error Generating Dependencies: {ex.Message}: {docName}");
+                reportLines.Add($"Error Generating Dependencies: {ex.Message}: {docName} {getDependenciesResult.response} stackTrace: {ex.StackTrace}");
             }
+            ThisReleaseReport.WriteToReportMultiline( reportLines );    
             return;
         }
    
@@ -440,7 +452,7 @@ namespace SolidworksAddTest
         {
             List<string> reportLines = new List<string>();
             int releaseResult = 0;
-            swDocumentTypes_e docType = file.DocumentType;
+            swDocumentTypes_e docType = file.SWDocumentType;
             switch (docType)
             {
                 case swDocumentTypes_e.swDocPART:
@@ -575,7 +587,7 @@ namespace SolidworksAddTest
         }
         // this would be used for DFS traversal if used in future
 
-        public bool  CopyEcnFolder(string sourceFolder, string destFolder)
+        public bool CopyEcnFolder(string sourceFolder, string destFolder)
         {
             try
             {
@@ -628,38 +640,43 @@ namespace SolidworksAddTest
                 ThisReleaseReport.WriteToReportMultiline(list);
             }
         }
-        public void ParseECNFile(EcnRelease thisRelease)
+        private List<List<string>> ParseECNFile(EcnRelease thisRelease)
         {
+            List<List<string>> EcnFileData = new List<List<string>>();
+            
             string ecnTextFile = thisRelease.ReleaseTxtFile;
             try
             {
                 int txtFileIndex = 0;
+
                 // Read lines from the file one by one as you loop
                 foreach (string line in File.ReadLines(ecnTextFile))
                 {
                     //current format of txt file has empty first line
                     if (txtFileIndex == 0)
                     {
+                        txtFileIndex++;
                         continue;
                     }
 
                     // Process each line here
                     Console.WriteLine(line);
                     string[] parsedLine = line.Split(new char[] { ' ' });
-                    string fileName = parsedLine[0];
-
-                    MessageBox.Show($"{line} fileName: {fileName}");
-
+                    List<string> parsedData = new List<string>(parsedLine);
+                    EcnFileData.Add(parsedData);
+                    txtFileIndex++;
                 }
-            }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine($"Error: The file '{ecnTextFile}' was not found.");
             }
             catch (IOException e)
             {
-                Console.WriteLine($"Error reading the file: {e.Message}");
+                Console.WriteLine($"An I/O error occurred: {e.Message}");
             }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An unexpected error occurred: {e.Message}");
+            }
+
+            return EcnFileData;
         }
 
         private void label1_Click(object sender, EventArgs e)

@@ -27,6 +27,33 @@ namespace SolidworksAddTest
             CriticalError = false;
         }
     }
+    public class EcnFileValidationResult : ValidationResultBase
+    {
+        public HashSet<string> ECNFileRevMismatch { get; set; }
+        public bool FoundECNFileRevMismatch { get; set; }
+        public HashSet<string> FailedApproval { get; set; }
+        public bool FoundFailedApproval { get; set; }
+        public HashSet<string> DuplicateEcnFile {  get; set; }
+        public bool FoundDuplicateECNFile { get; set; }
+        public HashSet<string> InvalidFile {  get; set; }
+        public bool FoundInvalidFile { get; set; }
+        public HashSet<string> MissingDrawingFile { get; set; }
+        public bool FoundMissingDrawingFile    { get; set; }
+
+
+
+        public EcnFileValidationResult()
+        {
+            CriticalError = false;
+            FoundECNFileRevMismatch = false;
+            FoundFailedApproval = false;
+            FoundDuplicateECNFile = false;
+            FoundInvalidFile = false;
+            FoundMissingDrawingFile = false;
+
+        }
+
+    }
     public class DrawingValidationResult : ValidationResultBase
     {
         public bool FoundDanglingAnnotations { get; set; }
@@ -68,10 +95,10 @@ namespace SolidworksAddTest
     }
 
     public class SearchAndDependenciesValidationResult : ValidationResultBase
-    { 
+    {
         public List<string> ValidPaths { get; set; }
-        public List<string> ArchivePaths { get;set; }
-        public List<Tuple<string,string>> InvalidDependencies { get; set; }
+        public List<string> ArchivePaths { get; set; }
+        public Dictionary<string, HashSet<string>> InvalidDependencies;
         public bool FoundInvalidDependencies { get; set; }
         public List<string> SearchPaths { get; set; }
 
@@ -88,8 +115,8 @@ namespace SolidworksAddTest
             };
             FoundInvalidDependencies = false;
             // First String in Tuple is parent file and second is dependent.  
-            InvalidDependencies = new List<Tuple<string, string>>();
-            SearchPaths = new List<string>();   
+            InvalidDependencies = new Dictionary<string, HashSet<string>>();
+            SearchPaths = new List<string>();
 
         }
 
@@ -150,13 +177,62 @@ namespace SolidworksAddTest
     #endregion
     public class ValidationBase
     {
-        protected SolidworksService ThisSolidworksService {get;set;}
+        protected SolidworksService ThisSolidworksService { get; set; }
 
         public ValidationBase(SolidworksService thisSolidworksService)
-            
+
         {
             ThisSolidworksService = thisSolidworksService;
         }
+    }
+    public class ECNFileValidation : ValidationBase
+    {
+        public enum ECNTxtFileIdxs
+        {
+            FileName,
+            QADApproved,
+            NewRevLetter,
+            OldRevLetter,
+            Obsolete,
+            ENCNumber,
+            QADRev
+        }
+ 
+        public ECNFileValidation(SolidworksService thisSolidworksService) : base(thisSolidworksService)
+        {
+            return;
+
+        }
+        public EcnFileValidationResult RunEcnFileValidation(List<List<string>> ecnData, List<string> FilesInEcnFolder)
+        {
+            
+            EcnFileValidationResult currentValidationResult = new EcnFileValidationResult();
+            Dictionary<string, string> ECNDrawingFileFound = new Dictionary<string, string>();
+            for (int i = 0; i < ecnData.Count; i++)
+            {
+                if (ECNDrawingFileFound.ContainsKey(ecnData[i][(int)ECNTxtFileIdxs.FileName]))
+                {
+                    currentValidationResult.FoundDuplicateECNFile = true;
+                    currentValidationResult.DuplicateEcnFile.Add(ecnData[i][(int)(ECNTxtFileIdxs.FileName)]);
+                }
+                if (ecnData[i][(int)(ECNTxtFileIdxs.NewRevLetter)] != ecnData[i][(int)(ECNTxtFileIdxs.QADRev)])
+                {
+                    
+                }
+            
+                        
+                        
+            }
+            for (int i = 0; i < FilesInEcnFolder.Count; i++)
+            {
+                
+            }
+
+            return currentValidationResult;
+        }
+    
+
+
     }
     public class SearchAndDependenciesValidation:ValidationBase
     {
@@ -177,29 +253,46 @@ namespace SolidworksAddTest
            */
             string[] pathSegments = referenceDocPath.Split(Path.DirectorySeparatorChar);
             string fileNameWithExt = pathSegments[pathSegments.Length - 1];
-            string pathWithoutFile = referenceDocPath.Substring(0, referenceDocPath.Length - fileNameWithExt.Length-1);
             bool pathValidation = false;
+            // if reference is in ecn folder it will be passed in as correct reference thru searchpaths
+            if (ThisEcnRelease.Files.ContainsKey(referenceFileName))
+            {
+                pathValidation = true;
+            }
             foreach (string archivePath in currentValidationResult.ArchivePaths)
             {
                 // if parent matches an archive path allow to pass validation
+                if (archivePath.Length > parentDocPath.Length)
+                {
+                    continue;
+                }
                 if (archivePath == parentDocPath.Substring(0, archivePath.Length))
                 {
                     pathValidation = true;
                 }
             }
+
             foreach (string validPath in currentValidationResult.ValidPaths)
             {
-                
+                string[] validPathSegments = validPath.Split(Path.DirectorySeparatorChar);
+                int validPathSegmentsLength = validPathSegments.Length;
+                string[] dependentPathSegments = referenceDocPath.Split(Path.DirectorySeparatorChar);
                 int dependentPathLen = referenceDocPath.Length;
-                if (dependentPathLen < validPath.Length)
+                bool isSegmentationEqual = true;
+                // want to check every segment for every valid path for the reference to see if any match 
+                for(int i = 0; i < validPathSegmentsLength;i++)
                 {
-                    continue;
+                    if (validPathSegments[i] != dependentPathSegments[i])
+                    {
+                        isSegmentationEqual = false;
+                    }
+
                 }
-                else if (validPath == referenceDocPath.Substring(0, validPath.Length) || ThisEcnRelease.FileNames.Contains(referenceFileName))
+                if (isSegmentationEqual)
                 {
                     pathValidation = true;
-                    
                 }
+
             }
             if (pathValidation)
             {
@@ -219,7 +312,16 @@ namespace SolidworksAddTest
             }
             else
             {
-                currentValidationResult.InvalidDependencies.Add(new Tuple<string,string>(parentDocPath, referenceDocPath));
+
+                if (ThisEcnRelease.Files.ContainsKey(parentFileName))
+                {
+                    parentDocPath = ThisEcnRelease.Files[parentFileName].FilePathSrc;
+                }
+                if (!currentValidationResult.InvalidDependencies.ContainsKey(parentDocPath))
+                {
+                    currentValidationResult.InvalidDependencies[parentDocPath] = new HashSet<string>();
+                }
+                currentValidationResult.InvalidDependencies[parentDocPath].Add(referenceDocPath);
                 currentValidationResult.FoundInvalidDependencies = true;
                 return 1;
             }

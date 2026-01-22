@@ -15,12 +15,17 @@ namespace SolidworksAddTest
         public int LoadedFilesRemaining { get; set; }
         public List<string> SearchPaths { get; set; }
         public HashSet<EcnFile> Parents { get; set; }
-        public swDocumentTypes_e DocumentType { get; set; }
+        public swDocumentTypes_e SWDocumentType { get; set; }
+        public bool IsExcelDocument { get; set; }
+        public bool IsDrawingDocument { get; set; }
+        public string Revision { get; set; }
         public EcnFile()
         {
             SearchPaths = new List<string>();
             Parents = new HashSet<EcnFile>();
             LoadedFilesRemaining = 0;
+            IsExcelDocument = false;
+            Revision = "_";
         }
         public void InsertSearchPaths(List<string> searchPaths)
         {

@@ -12,8 +12,7 @@ namespace SolidworksAddTest
         public string ReleaseFolderSrc { get; set; }
         public string ReleaseFolderTemp { get; set; }
         public string ReleaseTxtFile { get; set; }
-        public int ReleaseType { get; set; }
-
+        public bool ReadinessForRelease { get; set; }
         public Dictionary<string, EcnFile> Files { get; set; }
         public HashSet<string> FileNames {  get; set; }
         public HashSet<EcnFile> LeafFiles { get; set; }
@@ -22,10 +21,10 @@ namespace SolidworksAddTest
         public Stack<EcnFile> OpenFilesStack { get; set; }
         public HashSet<string> validReleaseExtensions { get; set; }
 
-        public EcnRelease(string releaseNumber, int releaseType)
+        public EcnRelease(string releaseNumber, bool isReadiness)
         {
             ReleaseNumber = releaseNumber;
-            ReleaseType = releaseType;
+            ReadinessForRelease = isReadiness;
             ReleaseFolderSrc = $"R:\\{releaseNumber}";
             ReleaseFolderTemp = $"C:\\releaseECN\\{releaseNumber}";
             ReleaseTxtFile = $"G:\\Parent ECR Files\\{releaseNumber}_Parent_ECN.txt";
@@ -37,7 +36,7 @@ namespace SolidworksAddTest
             OpenFilesStack = new Stack<EcnFile>();
             validReleaseExtensions = new HashSet<string>();
 
-            List<string> validReleaseExtensionsList = new List<string>{ "SLDPRT", "SLDASM", "SLDDRW" };
+            List<string> validReleaseExtensionsList = new List<string>{ "SLDPRT", "SLDASM", "SLDDRW","xls" };
             foreach (string validReleaseExtension in validReleaseExtensionsList)
             {
                 validReleaseExtensions.Add(validReleaseExtension);
