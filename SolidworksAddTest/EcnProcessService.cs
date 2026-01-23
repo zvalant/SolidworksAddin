@@ -81,6 +81,7 @@ namespace SolidworksAddTest
 
             InitalizeRelease(ecnNumber);
             string folderPath = ThisEcnRelease.ReleaseFolderTemp;
+            string sectionHeader;
             var FilesInECNFolder = new List<string>();
             ClearEcnLocalFolder(ThisEcnRelease.ReleaseFolderTemp, true);
             bool canCopyFolderOver = CopyEcnFolder(ThisEcnRelease.ReleaseFolderSrc, ThisEcnRelease.ReleaseFolderTemp);
@@ -90,29 +91,68 @@ namespace SolidworksAddTest
                 FinishRelease(folderPath);
                 return 1;
             }
-            // check ecn txt file and run comparative check to make sure appropriate files are in folder
-
-
-            List<List<string>> EcnData = ParseECNFile(ThisEcnRelease);
-            ECNFileValidation currentEcnFileValidation = new ECNFileValidation(ThisSolidworksService);
-            EcnFileValidationResult fileValidationResult = currentEcnFileValidation.RunEcnFileValidation(EcnData, FilesInECNFolder);
-
-
-
-
-            //closes all open sw docs to prevent any issues during release process
-            ThisSolidworksService.CloseAllDocuments();
-            //prevent active open files from being included
+            // collect all files that are not actively open temps '~' is used to exclude active files
             foreach (string file in Directory.GetFiles(folderPath))
             {
                 string fileName = ThisUtility.GetFileWithExt(file);
                 string fileExtension = ThisUtility.GetFileExt(file);
                 // will only add files if it contains an extension and is not an actively opened file
-                if (fileName[0] != '~' && ThisEcnRelease.validReleaseExtensions.Contains(fileExtension)) 
+                if (fileName[0] != '~' && ThisEcnRelease.validReleaseExtensions.Contains(fileExtension))
                 {
                     FilesInECNFolder.Add(file);
                 }
             }
+            sectionHeader = "ECN & Folder Validation";
+            ThisReleaseReport.WriteSectionHeader(sectionHeader);
+
+            // check ecn txt file and run comparative check to make sure appropriate files are in folder
+            List<List<string>> EcnData;
+            EcnData = ParseECNFile(ThisEcnRelease);
+            ECNFileValidation currentEcnFileValidation = new ECNFileValidation(ThisSolidworksService);
+            EcnFileValidationResult fileValidationResult = new EcnFileValidationResult();
+            try
+            {
+                fileValidationResult = currentEcnFileValidation.RunEcnFileValidation(EcnData, FilesInECNFolder);
+            }
+            catch (Exception e)
+            {
+                ThisReleaseReport.WriteToReportSingleline($"{e.StackTrace}");
+            }
+            if (fileValidationResult.CriticalError)
+            {
+                ThisReleaseReport.WriteToReportSingleline("CRITAL ERROR AT ECN FILE CHECK");
+                FinishRelease(folderPath);
+                return 1;
+            }
+            if (fileValidationResult.FoundDuplicateECNFile)
+            {
+
+                ThisReleaseReport.WriteToReportSingleline($"Validation Status: Failed");
+                ThisReleaseReport.WriteToReportSingleline($"Found Duplicate numbers in txt file: {ThisEcnRelease.ReleaseTxtFile}");
+                foreach (string file in fileValidationResult.DuplicateEcnFile)
+                {
+                    ThisReleaseReport.WriteToReportSingleline($"{file}");
+                }
+                FinishRelease(folderPath);
+                return 1;
+            }
+            if (fileValidationResult.FoundMissingDrawingFile)
+            {
+                ThisReleaseReport.WriteToReportSingleline($"Validation Status: Failed");
+                ThisReleaseReport.WriteToReportSingleline($"Release is missing following Drawing Documents:");
+                foreach (string file in fileValidationResult.MissingDrawingFile)
+                {
+                    ThisReleaseReport.WriteToReportSingleline($"{file}");
+                }
+                FinishRelease(folderPath);
+                return 1;
+
+            }
+
+            //closes all open sw docs to prevent any issues during release process
+            ThisReleaseReport.WriteToReportSingleline($"Validation Status: Success");
+            ThisSolidworksService.CloseAllDocuments();
+            //prevent active open files from being included
 
 
 
@@ -153,7 +193,7 @@ namespace SolidworksAddTest
             List<string> reportLines = new List<string>();
             Dictionary<string, string> wrongReferencePairs = new Dictionary<string, string>();
             int invalidReferences = 0;
-            string sectionHeader = "Reference Validation";
+            sectionHeader = "Reference Validation";
             bool validationStatus = true;
             ThisReleaseReport.WriteSectionHeader(sectionHeader);
             foreach ( string fileName in ThisEcnRelease.Files.Keys)

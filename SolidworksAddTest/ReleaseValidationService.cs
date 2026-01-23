@@ -29,28 +29,35 @@ namespace SolidworksAddTest
     }
     public class EcnFileValidationResult : ValidationResultBase
     {
+        public HashSet<string> FilesNotInECN { get; set; }
         public HashSet<string> ECNFileRevMismatch { get; set; }
         public bool FoundECNFileRevMismatch { get; set; }
         public HashSet<string> FailedApproval { get; set; }
         public bool FoundFailedApproval { get; set; }
         public HashSet<string> DuplicateEcnFile {  get; set; }
         public bool FoundDuplicateECNFile { get; set; }
-        public HashSet<string> InvalidFile {  get; set; }
-        public bool FoundInvalidFile { get; set; }
         public HashSet<string> MissingDrawingFile { get; set; }
         public bool FoundMissingDrawingFile    { get; set; }
+        public Dictionary<string, bool> ECNFilesRequiredFound { get; set; }
+
 
 
 
         public EcnFileValidationResult()
         {
+            FilesNotInECN = new HashSet<string>();
+            ECNFileRevMismatch = new HashSet<string>();
+            FailedApproval = new HashSet<string>();
+            DuplicateEcnFile = new HashSet<string>();
+            MissingDrawingFile = new HashSet<string>();
+
+            ECNFilesRequiredFound = new Dictionary<string, bool>();
+            
             CriticalError = false;
             FoundECNFileRevMismatch = false;
             FoundFailedApproval = false;
             FoundDuplicateECNFile = false;
-            FoundInvalidFile = false;
             FoundMissingDrawingFile = false;
-
         }
 
     }
@@ -203,31 +210,68 @@ namespace SolidworksAddTest
             return;
 
         }
-        public EcnFileValidationResult RunEcnFileValidation(List<List<string>> ecnData, List<string> FilesInEcnFolder)
+        public EcnFileValidationResult RunEcnFileValidation(List<List<string>> ecnData, List<string> filesInEcnFolder)
         {
-            
             EcnFileValidationResult currentValidationResult = new EcnFileValidationResult();
-            Dictionary<string, string> ECNDrawingFileFound = new Dictionary<string, string>();
+        
             for (int i = 0; i < ecnData.Count; i++)
             {
-                if (ECNDrawingFileFound.ContainsKey(ecnData[i][(int)ECNTxtFileIdxs.FileName]))
+
+                List<string> currentLine = ecnData[i];
+                if (currentLine.Count < 6)
+                {
+                }
+
+                string currentFileNameWOExt = Path.GetFileNameWithoutExtension(currentLine[0]);
+                if (currentValidationResult.ECNFilesRequiredFound.ContainsKey(currentLine[(int)ECNTxtFileIdxs.FileName]))
                 {
                     currentValidationResult.FoundDuplicateECNFile = true;
-                    currentValidationResult.DuplicateEcnFile.Add(ecnData[i][(int)(ECNTxtFileIdxs.FileName)]);
+                    currentValidationResult.DuplicateEcnFile.Add(currentLine[(int)(ECNTxtFileIdxs.FileName)]);
                 }
-                if (ecnData[i][(int)(ECNTxtFileIdxs.NewRevLetter)] != ecnData[i][(int)(ECNTxtFileIdxs.QADRev)])
+
+                if (currentLine[(int)(ECNTxtFileIdxs.NewRevLetter)] != currentLine[(int)(ECNTxtFileIdxs.QADRev)])
                 {
-                    
+                    currentValidationResult.FoundECNFileRevMismatch = true;
+                    currentValidationResult.ECNFileRevMismatch.Add(currentLine[(int)(ECNTxtFileIdxs.FileName)]);
                 }
-            
-                        
-                        
-            }
-            for (int i = 0; i < FilesInEcnFolder.Count; i++)
-            {
-                
+
+                if (currentLine[(int)ECNTxtFileIdxs.QADApproved] != "Y")
+                {
+
+                    currentValidationResult.FoundFailedApproval = true;
+                    currentValidationResult.FailedApproval.Add(currentLine[(int)(ECNTxtFileIdxs.QADApproved)]);
+                }
+
+                currentValidationResult.ECNFilesRequiredFound[currentFileNameWOExt] = false;
+
+
             }
 
+            for (int i = 0; i < filesInEcnFolder.Count; i++)
+            {
+
+                string currentFile = filesInEcnFolder[i];
+                string fileNameWOExt = Path.GetFileNameWithoutExtension(currentFile);
+                string fileExt = Path.GetExtension(currentFile);
+                if (currentValidationResult.ECNFilesRequiredFound.ContainsKey(fileNameWOExt) && (fileExt == SolidworksService.EXCELFILEEXT || fileExt == SolidworksService.DRAWINGFILEEXT))
+                {
+                    currentValidationResult.ECNFilesRequiredFound[fileNameWOExt] = true;
+                }
+                else if (!currentValidationResult.ECNFilesRequiredFound.ContainsKey(fileNameWOExt))
+                {
+                    currentValidationResult.FilesNotInECN.Add(fileNameWOExt);
+
+                }
+            }
+            foreach (KeyValuePair<string, bool> filePair in currentValidationResult.ECNFilesRequiredFound)
+            {
+                if (filePair.Value == false)
+                {
+                    currentValidationResult.FoundMissingDrawingFile = true;
+                    currentValidationResult.MissingDrawingFile.Add(filePair.Key);
+                }
+            }
+ 
             return currentValidationResult;
         }
     
