@@ -30,8 +30,6 @@ namespace SolidworksAddTest
     public class EcnFileValidationResult : ValidationResultBase
     {
         public HashSet<string> FilesNotInECN { get; set; }
-        public HashSet<string> ECNFileRevMismatch { get; set; }
-        public bool FoundECNFileRevMismatch { get; set; }
         public HashSet<string> FailedApproval { get; set; }
         public bool FoundFailedApproval { get; set; }
         public HashSet<string> DuplicateEcnFile {  get; set; }
@@ -39,6 +37,7 @@ namespace SolidworksAddTest
         public HashSet<string> MissingDrawingFile { get; set; }
         public bool FoundMissingDrawingFile    { get; set; }
         public Dictionary<string, bool> ECNFilesRequiredFound { get; set; }
+        public bool ValidataionError { get; set; }
 
 
 
@@ -46,7 +45,6 @@ namespace SolidworksAddTest
         public EcnFileValidationResult()
         {
             FilesNotInECN = new HashSet<string>();
-            ECNFileRevMismatch = new HashSet<string>();
             FailedApproval = new HashSet<string>();
             DuplicateEcnFile = new HashSet<string>();
             MissingDrawingFile = new HashSet<string>();
@@ -54,10 +52,10 @@ namespace SolidworksAddTest
             ECNFilesRequiredFound = new Dictionary<string, bool>();
             
             CriticalError = false;
-            FoundECNFileRevMismatch = false;
             FoundFailedApproval = false;
             FoundDuplicateECNFile = false;
             FoundMissingDrawingFile = false;
+            ValidataionError = false;
         }
 
     }
@@ -65,11 +63,13 @@ namespace SolidworksAddTest
     {
         public bool FoundDanglingAnnotations { get; set; }
         public List<SheetInfo> TotalSheets { get; set; }
+        public bool FoundRevMismatch = false;   
 
         public DrawingValidationResult()
         {
             CriticalError = false;
             FoundDanglingAnnotations = false;
+            FoundRevMismatch = false;   
             TotalSheets = new List<SheetInfo>();
         }
     }
@@ -210,7 +210,8 @@ namespace SolidworksAddTest
             return;
 
         }
-        public EcnFileValidationResult RunEcnFileValidation(List<List<string>> ecnData, List<string> filesInEcnFolder)
+        // general validation check on files in folder and ecn txt file to make sure correct drawings are in folder
+        public EcnFileValidationResult RunEcnFileValidation(List<List<string>> ecnData, List<string> filesInEcnFolder, bool readinessForRelease)
         {
             EcnFileValidationResult currentValidationResult = new EcnFileValidationResult();
         
@@ -226,20 +227,21 @@ namespace SolidworksAddTest
                 if (currentValidationResult.ECNFilesRequiredFound.ContainsKey(currentLine[(int)ECNTxtFileIdxs.FileName]))
                 {
                     currentValidationResult.FoundDuplicateECNFile = true;
+                    currentValidationResult.ValidataionError = true;
                     currentValidationResult.DuplicateEcnFile.Add(currentLine[(int)(ECNTxtFileIdxs.FileName)]);
-                }
-
-                if (currentLine[(int)(ECNTxtFileIdxs.NewRevLetter)] != currentLine[(int)(ECNTxtFileIdxs.QADRev)])
-                {
-                    currentValidationResult.FoundECNFileRevMismatch = true;
-                    currentValidationResult.ECNFileRevMismatch.Add(currentLine[(int)(ECNTxtFileIdxs.FileName)]);
-                }
+                }     
+                // mfg has to approve ecn before values will be correct so not a error on readiness
 
                 if (currentLine[(int)ECNTxtFileIdxs.QADApproved] != "Y")
                 {
 
                     currentValidationResult.FoundFailedApproval = true;
-                    currentValidationResult.FailedApproval.Add(currentLine[(int)(ECNTxtFileIdxs.QADApproved)]);
+                    currentValidationResult.FailedApproval.Add(currentLine[(int)(ECNTxtFileIdxs.FileName)]);
+                    if (!readinessForRelease)
+                    {
+                        currentValidationResult.ValidataionError = true;
+                    }
+
                 }
 
                 currentValidationResult.ECNFilesRequiredFound[currentFileNameWOExt] = false;
@@ -269,6 +271,7 @@ namespace SolidworksAddTest
                 {
                     currentValidationResult.FoundMissingDrawingFile = true;
                     currentValidationResult.MissingDrawingFile.Add(filePair.Key);
+                    currentValidationResult.ValidataionError = true;
                 }
             }
  
@@ -600,7 +603,7 @@ namespace SolidworksAddTest
 
             return currentAssemblyResult;
         }
-        public DrawingValidationResult CheckDrawing(ModelDoc2 doc, string filePath)
+        public DrawingValidationResult CheckDrawing(ModelDoc2 doc, string filePath, EcnFile currentFileObj)
         {
             DrawingValidationResult currentDrawingResult = new DrawingValidationResult();
             if (doc == null)

@@ -106,13 +106,22 @@ namespace SolidworksAddTest
             ThisReleaseReport.WriteSectionHeader(sectionHeader);
 
             // check ecn txt file and run comparative check to make sure appropriate files are in folder
-            List<List<string>> EcnData;
-            EcnData = ParseECNFile(ThisEcnRelease);
+            List<List<string>> ecnData;
+            ecnData = ParseECNFile(ThisEcnRelease);
+            Dictionary<string,string> ecnDataCurrentRevs = new Dictionary<string, string>();
+            int partIdx = 0;
+            int currentRevIdx = 2;
+
+            foreach (List<string> partLine in ecnData)
+            {
+                ecnDataCurrentRevs[partLine[partIdx]] = partLine[currentRevIdx];
+            }
+
             ECNFileValidation currentEcnFileValidation = new ECNFileValidation(ThisSolidworksService);
             EcnFileValidationResult fileValidationResult = new EcnFileValidationResult();
             try
             {
-                fileValidationResult = currentEcnFileValidation.RunEcnFileValidation(EcnData, FilesInECNFolder);
+                fileValidationResult = currentEcnFileValidation.RunEcnFileValidation(ecnData, FilesInECNFolder, ThisEcnRelease.ReadinessForRelease);
             }
             catch (Exception e)
             {
@@ -120,37 +129,62 @@ namespace SolidworksAddTest
             }
             if (fileValidationResult.CriticalError)
             {
-                ThisReleaseReport.WriteToReportSingleline("CRITAL ERROR AT ECN FILE CHECK");
+                ThisReleaseReport.WriteToReportSingleline("CRITAL ERROR AT FILE VALIDATION");
                 FinishRelease(folderPath);
                 return 1;
             }
-            if (fileValidationResult.FoundDuplicateECNFile)
+            if (fileValidationResult.ValidataionError)
             {
-
                 ThisReleaseReport.WriteToReportSingleline($"Validation Status: Failed");
-                ThisReleaseReport.WriteToReportSingleline($"Found Duplicate numbers in txt file: {ThisEcnRelease.ReleaseTxtFile}");
-                foreach (string file in fileValidationResult.DuplicateEcnFile)
+
+                if (fileValidationResult.FoundDuplicateECNFile)
                 {
-                    ThisReleaseReport.WriteToReportSingleline($"{file}");
+
+                    ThisReleaseReport.WriteToReportSingleline($"Found Duplicate numbers in txt file: {ThisEcnRelease.ReleaseTxtFile}");
+                    foreach (string file in fileValidationResult.DuplicateEcnFile)
+                    {
+                        ThisReleaseReport.WriteToReportSingleline($"{file}");
+                    }
+                }
+                if (fileValidationResult.FoundMissingDrawingFile)
+                {
+                    ThisReleaseReport.WriteToReportSingleline($"Release is missing following Drawing Documents:");
+                    foreach (string file in fileValidationResult.MissingDrawingFile)
+                    {
+                        ThisReleaseReport.WriteToReportSingleline($"{file}");
+                    }
+
+                }
+                if (fileValidationResult.FoundFailedApproval && !ThisEcnRelease.ReadinessForRelease)
+                    ThisReleaseReport.WriteToReportSingleline($"Found Part(s) Missing QAD Approval");
+                {
+                    foreach (string file in fileValidationResult.FailedApproval)
+                    {
+                        ThisReleaseReport.WriteToReportSingleline($"{file}");
+                    }
+                    
                 }
                 FinishRelease(folderPath);
                 return 1;
             }
-            if (fileValidationResult.FoundMissingDrawingFile)
-            {
-                ThisReleaseReport.WriteToReportSingleline($"Validation Status: Failed");
-                ThisReleaseReport.WriteToReportSingleline($"Release is missing following Drawing Documents:");
-                foreach (string file in fileValidationResult.MissingDrawingFile)
-                {
-                    ThisReleaseReport.WriteToReportSingleline($"{file}");
-                }
-                FinishRelease(folderPath);
-                return 1;
-
-            }
-
-            //closes all open sw docs to prevent any issues during release process
+            
             ThisReleaseReport.WriteToReportSingleline($"Validation Status: Success");
+            if (ThisEcnRelease.ReadinessForRelease && fileValidationResult.FoundFailedApproval)
+            {
+                ThisReleaseReport.WriteToReportSingleline($"=".PadRight(90, '='));
+                ThisReleaseReport.WriteToReportSingleline($"WARNING: FOLLOWING ISSSUES WILL NOT PASS OFFICIAL RELEASE:");
+                ThisReleaseReport.WriteToReportSingleline($"=".PadRight(90, '='));
+
+                if (fileValidationResult.FoundFailedApproval)
+                {
+                    ThisReleaseReport.WriteToReportSingleline($"Found Part(s) Missing QAD Approval");
+                    foreach (string file in fileValidationResult.FailedApproval)
+                    {
+                        ThisReleaseReport.WriteToReportSingleline($"{file}");
+                    }
+
+                }
+            }
             ThisSolidworksService.CloseAllDocuments();
             //prevent active open files from being included
 
@@ -162,10 +196,19 @@ namespace SolidworksAddTest
             for (int i = 0; i < FilesInECNFolder.Count; i++)
             {
                 string currentFile = FilesInECNFolder[i];
+                string currentFileWOExt = Path.GetFileNameWithoutExtension( currentFile );
                 var currentFileObj = new EcnFile();
+ 
                 currentFileObj.FileName = ThisUtility.GetFileWithExt(currentFile);
                 currentFileObj.FilePath = FilesInECNFolder[i];
                 currentFileObj.FilePathSrc = ThisEcnRelease.ReleaseFolderSrc + "\\" + currentFileObj.FileName;
+                if (ecnDataCurrentRevs.ContainsKey(currentFileWOExt))
+                {
+                    currentFileObj.Revision = ecnDataCurrentRevs[currentFileWOExt];
+                }
+
+
+
                 ThisEcnRelease.FileNames.Add(currentFileObj.FileName);
                 ThisEcnRelease.AddFile(currentFileObj, currentFileObj.FileName);
                 switch (Path.GetExtension(currentFile))
@@ -488,19 +531,19 @@ namespace SolidworksAddTest
         }
    
 
-        private int ReleaseFile(EcnFile file)
+        private int ReleaseFile(EcnFile currentFileObj)
         {
             List<string> reportLines = new List<string>();
             int releaseResult = 0;
-            swDocumentTypes_e docType = file.SWDocumentType;
+            swDocumentTypes_e docType = currentFileObj.SWDocumentType;
             switch (docType)
             {
                 case swDocumentTypes_e.swDocPART:
                     
-                    SolidworksServiceResult<ModelDoc2> openPartResult = ThisSolidworksService.OpenPart(file.FilePath);
+                    SolidworksServiceResult<ModelDoc2> openPartResult = ThisSolidworksService.OpenPart(currentFileObj.FilePath);
                     if (!openPartResult.Success)
                     {
-                        reportLines.Add($" Error Opening Part {file.FilePath}");
+                        reportLines.Add($" Error Opening Part {currentFileObj.FilePath}");
                         return 1;
 
                     }
@@ -517,7 +560,7 @@ namespace SolidworksAddTest
                     else if (partReleaseResult.FoundFeatureErrors)
                     {
                         reportLines.Add($"Validation Status: Failed");
-                        reportLines.Add(file.FilePath);
+                        reportLines.Add(currentFileObj.FilePath);
                         releaseResult = 1;
 
 
@@ -532,10 +575,10 @@ namespace SolidworksAddTest
                     break;
                 case swDocumentTypes_e.swDocASSEMBLY:
 
-                    SolidworksServiceResult<ModelDoc2> openAssemblyResult = ThisSolidworksService.OpenAssembly(file.FilePath);
+                    SolidworksServiceResult<ModelDoc2> openAssemblyResult = ThisSolidworksService.OpenAssembly(currentFileObj.FilePath);
                     if (!openAssemblyResult.Success)
                     {
-                        reportLines.Add($"Error Opening {file.FilePath}");
+                        reportLines.Add($"Error Opening {currentFileObj.FilePath}");
                         return 1;
                     }
 
@@ -551,7 +594,7 @@ namespace SolidworksAddTest
 
                     {
                         reportLines.Add($"Validation Status: Failed");
-                        reportLines.Add (file.FilePath);
+                        reportLines.Add (currentFileObj.FilePath);
                         foreach (ComponentInfo componentError in assemblyReleaseResult.TotalComponentErrors)
                         {
                             reportLines.Add($"\t-{componentError.Name}({componentError.Configuration}) - {componentError.ConstraintStatus}");
@@ -564,13 +607,13 @@ namespace SolidworksAddTest
                 case swDocumentTypes_e.swDocDRAWING:
                     bool deleteAnnotations = false;
                     docType = swDocumentTypes_e.swDocDRAWING;
-                    SolidworksServiceResult<ModelDoc2> openDrawingResult = ThisSolidworksService.OpenDrawing(file.FilePath);
+                    SolidworksServiceResult<ModelDoc2> openDrawingResult = ThisSolidworksService.OpenDrawing(currentFileObj.FilePath);
                     if (!openDrawingResult.Success)
                     {
                         return 1;
                     }
                     ModelDoc2 activeDrawing = openDrawingResult.response;
-                    DrawingValidationResult drawingReleaseResult = ThisReleaseValidationService.CheckDrawing(activeDrawing, file.FilePath);
+                    DrawingValidationResult drawingReleaseResult = ThisReleaseValidationService.CheckDrawing(activeDrawing, currentFileObj.FilePath,currentFileObj);
                     if (drawingReleaseResult.CriticalError)
                     {
                         reportLines.Add($"Validation Status: CRITICAL ERROR \n COULD NOT RUN VALIDATION");
@@ -579,7 +622,7 @@ namespace SolidworksAddTest
                     else if(drawingReleaseResult.FoundDanglingAnnotations)
                     {
                         reportLines.Add($"Validation Status: Failed");
-                        reportLines.Add(file.FilePath);
+                        reportLines.Add(currentFileObj.FilePath);
                         releaseResult = 1;
                         foreach (SheetInfo currentSheetInfo in drawingReleaseResult.TotalSheets) 
                         {
@@ -608,7 +651,7 @@ namespace SolidworksAddTest
                     if (drawingReleaseResult.FoundDanglingAnnotations && deleteAnnotations)
                     {
                         ThisSolidworksService.DeleteAllSelections(activeDrawing);
-                        ThisSolidworksService.MoveSWFile(file.FilePath, file.FileName, ThisEcnRelease.ReleaseFolderSrc);
+                        ThisSolidworksService.MoveSWFile(currentFileObj.FilePath, currentFileObj.FileName, ThisEcnRelease.ReleaseFolderSrc);
 
 
                     }

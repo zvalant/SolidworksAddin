@@ -49,7 +49,7 @@ namespace SolidworksAddTest
                 {
                     writer.WriteLine($"ECN {ReleaseType}: {EcnNumber}");
                     writer.WriteLine(reportFilePath);
-                    writer.WriteLine("=".PadRight(60, '='));
+                    writer.WriteLine("=".PadRight(90, '='));
                     writer.WriteLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 }
             }
@@ -64,7 +64,7 @@ namespace SolidworksAddTest
             {
                 List<string> reportLines = new List<string>();
                 
-                reportLines.Add("=".PadRight(60, '='));
+                reportLines.Add("=".PadRight(90, '='));
                 reportLines.Add($"{sectionName}");
                 reportLines.Add("");
                 WriteToReportMultiline(reportLines);
