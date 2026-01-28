@@ -611,26 +611,30 @@ namespace SolidworksAddTest
                 currentDrawingResult.CriticalError = true;
                 return currentDrawingResult;
             }
-            
             ModelDocExtension swModExt = default(ModelDocExtension);
             int danglingCount = 0;
             bool annotationsSeleted = false;
             SelectionMgr swSelmgr;
             SelectData swSelData;
+            CustomPropertyManager swCustomPropertyManager;
 
             swSelmgr = (SelectionMgr)doc.SelectionManager;
             swModExt = (ModelDocExtension)doc.Extension;
-            //bool deleteAnnotations = true;
             bool deleteAnnotations = true;
             int sheetIdx = 0;
 
             swSelData = swSelmgr.CreateSelectData();
 
-
-
-      
             int totalAnnotations = 0;
             DrawingDoc swDrawingDoc = (DrawingDoc)doc;
+
+            SolidworksServiceResult<string> getRevisionResult = ThisSolidworksService.GetDrawingRevision(doc);
+
+            if (getRevisionResult.response != currentFileObj.Revision)
+            {
+                MessageBox.Show($"Rev Mismatch!");
+            }
+
             SolidworksServiceResult<object[]> getSheetsResult = ThisSolidworksService.GetDrawingSheets(swDrawingDoc);
             object[] sheets = getSheetsResult.response;
             SolidworksServiceResult<string[]> getSheetNameResult = ThisSolidworksService.GetDrawingSheetNames(swDrawingDoc);

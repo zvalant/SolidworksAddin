@@ -104,13 +104,11 @@ namespace SolidworksAddTest
                 if (openFileResult.Success)
                 {
                     ModelDoc2 doc = openFileResult.response;
-                    openAssemblyResult.Success = true;
                     ModelDocExtension swDocExt = doc.Extension;
                     openAssemblyResult.response = doc;
 
                 }
 
-                return openAssemblyResult;
                 
             }
             catch (Exception ex)
@@ -119,6 +117,10 @@ namespace SolidworksAddTest
                 openAssemblyResult.ErrorMessage = errorMsg;
                 return openAssemblyResult;
             }
+            openAssemblyResult.Success = true;
+            return openAssemblyResult;
+
+
         }
         public SolidworksServiceResult<ModelDoc2> OpenFile(string filepath, int docType, int options)
         {
@@ -151,6 +153,7 @@ namespace SolidworksAddTest
                 string errorMessage = ($"Failed to open document.\nError: {SWErrorMsg}\nWarnings: {warnings}");
                 OpenFileResult.ErrorMessage = errorMessage;
             }
+            OpenFileResult.Success = true;
             return OpenFileResult;
         }
         public SolidworksServiceResult<bool> ApplySearchPaths(List<string> searchPathPriority)
@@ -207,16 +210,15 @@ namespace SolidworksAddTest
                 {
                     MessageBox.Show("Parent add-in is not set.");
                     closeFileResult.ErrorMessage = "Addin is not set correctly";
-                    closeFileResult.response = closeFileResult.Success;
                 }
 
                 SolidWorksApp.CloseDoc(filepath);
-                closeFileResult.Success = true;
             }
             catch (Exception ex)
             {
                 closeFileResult.ErrorMessage = $"Error Closing SW File: {ex.Message}";
             }
+            closeFileResult.Success = true;
             closeFileResult.response = closeFileResult.Success;
 
             return closeFileResult;
@@ -234,6 +236,7 @@ namespace SolidworksAddTest
             {
                 getDependenciesResult.ErrorMessage = $"Error generating Dependencies {ex}";
             }
+            getDependenciesResult.Success = true;
             return getDependenciesResult;
         }
         public SolidworksServiceResult<HashSet<string>> getSuppressedComponentMates(ModelDoc2 doc)
@@ -260,6 +263,7 @@ namespace SolidworksAddTest
 
                 }
             }
+            suppressedMateResult.Success = true;    
             suppressedMateResult.response = suppressedMatesResult;
             return suppressedMateResult;
         }
@@ -310,7 +314,6 @@ namespace SolidworksAddTest
                     string SWerrorMsg = GetOpenDocumentError(errors);
                     string ErrorMsg = $"Failed to open document.\nError: {SWerrorMsg}\nWarnings: {warnings}";
                 }
-                return openPartResult;
 
             }
             catch (Exception ex)
@@ -320,6 +323,9 @@ namespace SolidworksAddTest
                 openPartResult.ErrorMessage = ErrorMsg;
                 return openPartResult;
             }
+            openPartResult.Success = true;
+            return openPartResult;
+
         }
         public SolidworksServiceResult<ModelDoc2> OpenDrawing(string filepath)
         {
@@ -356,15 +362,16 @@ namespace SolidworksAddTest
                     openFileResult.ErrorMessage = $"Failed to open document {openFileResult.ErrorMessage}";
                     return openFileResult;
                 }
-                OpenDrawingResult.Success = true;
-                OpenDrawingResult.response = openFileResult.response;
-                return OpenDrawingResult;
+
             }
             catch (Exception ex)
             {
                 OpenDrawingResult.ErrorMessage = ($"Error while opening Drawing: {ex.Message}");
                 return OpenDrawingResult;
             }
+            OpenDrawingResult.Success = true;
+            OpenDrawingResult.response = openFileResult.response;
+            return OpenDrawingResult;
         }
 
         private string GetOpenDocumentError(int errorCode)
@@ -496,13 +503,13 @@ namespace SolidworksAddTest
             try
             {
                 getSketchResult.response = (Sketch)currentFeature.GetSpecificFeature2();
-                getSketchResult.Success = true;
 
             }
             catch (Exception ex)
             {
                 getSketchResult.ErrorMessage = ex.Message;
             }
+            getSketchResult.Success = true;
             return getSketchResult;
         }
         public SolidworksServiceResult<string> GetFeatureTypeName(Feature currentFeature)
@@ -511,6 +518,32 @@ namespace SolidworksAddTest
             getFeatureTypeNameResult.response = currentFeature.GetTypeName2();
             getFeatureTypeNameResult.Success = true;
             return getFeatureTypeNameResult;
+            
+        }
+        public SolidworksServiceResult<string> GetDrawingRevision(ModelDoc2 drawingDoc)
+
+        {
+            
+            SolidworksServiceResult<string> getRevisionResult = new SolidworksServiceResult<string>();
+
+            try
+            {
+                ModelDocExtension swModExt = default(ModelDocExtension);
+                CustomPropertyManager swCustomPropertyManager;
+                swModExt = (ModelDocExtension)drawingDoc.Extension;
+                swCustomPropertyManager = (CustomPropertyManager)swModExt.CustomPropertyManager[""];
+                swCustomPropertyManager.Get6("REV", false, out string RevsisionValue,
+    out string ResolvedRevsisionValue, out bool ResolvedResult, out bool link);
+                getRevisionResult.response = RevsisionValue;
+            }
+            catch (Exception ex)
+            {
+                getRevisionResult.ErrorMessage = ex.Message;
+                return getRevisionResult;
+            }
+            getRevisionResult.Success = true;
+            return getRevisionResult;
+
             
         }
     }
